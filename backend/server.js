@@ -1,16 +1,21 @@
+// Load environment variables FIRST before any other imports
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const companyRoutes = require('./routes/companyRoutes');
 const emailLogRoutes = require('./routes/emailLogRoutes');
+const sendEmailRoutes = require('./routes/sendEmailRoutes');
+const { startCronJob } = require('./config/cron');
+const { sendPendingEmails } = require('./controllers/cronController');
 
-// Load environment variables
-dotenv.config();
-
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB, then start the cron scheduler AFTER DB is ready
+connectDB().then(() => {
+  startCronJob(sendPendingEmails);
+  console.log('[CRON] Automated email scheduler started successfully');
+});
 
 const app = express();
 
@@ -20,6 +25,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/companies', companyRoutes);
+app.use('/api/emails/send', sendEmailRoutes);
 app.use('/api/emails', emailLogRoutes);
 
 // Basic test route
