@@ -1,316 +1,327 @@
-import React, { useState } from "react";
-import { Search, ChevronLeft, ChevronRight, MoreVertical, Paperclip, Send, Mail } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, ChevronLeft, ChevronRight, MoreVertical, Paperclip, Send, Mail, AlertCircle, Loader2 } from "lucide-react";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import DoubleTick from "../components/ui/DoubleTick";
 import { cn } from "../utils/cn";
+import { getToken } from "../utils/auth";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const Emails = () => {
   const [selectedId, setSelectedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [showMobileDetail, setShowMobileDetail] = useState(false);
+  
+  // Data States
+  const [companies, setCompanies] = useState([]);
+  const [selectedLogs, setSelectedLogs] = useState([]);
+  
+  // UI States
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [error, setError] = useState(null);
 
-  const companies = [
-    {
-      id: 1,
-      name: "Infosys",
-      email: "hr@infosys.com",
-      role: "React Developer",
-      date: "29 May 2026",
-      group: "Today",
-      seen: true,
-      time: "9:00 AM",
-      subject: "Application for React Developer Position",
-      body: "Dear Hiring Team, I am Deepanshu, a Full Stack Developer skilled in React.js, Node.js, Express.js, and MongoDB. I have hands-on experience building real-world applications and recently completed an internship at DS Group. I would love to contribute to your team. Please find my resume attached. Best regards, Deepanshu"
-    },
-    {
-      id: 2,
-      name: "TCS",
-      email: "careers@tcs.com",
-      role: "Frontend Engineer",
-      date: "29 May 2026",
-      group: "Today",
-      seen: false,
-      time: "9:05 AM",
-      subject: "Application for Frontend Engineer Position",
-      body: "Dear Hiring Team, I am Deepanshu, a Frontend Developer specialized in React.js and modern CSS frameworks. I have a strong foundation in building responsive and performant user interfaces. I am eager to apply my frontend development skills to your projects. Best regards, Deepanshu"
-    },
-    {
-      id: 3,
-      name: "Wipro",
-      email: "hr@wipro.com",
-      role: "MERN Developer",
-      date: "29 May 2026",
-      group: "Today",
-      seen: true,
-      time: "9:10 AM",
-      subject: "Application for MERN Developer Position",
-      body: "Dear Hiring Team, I am Deepanshu, a MERN Stack Developer with experience in building end-to-end web applications. I am proficient in MongoDB, Express, React, and Node.js. I would appreciate the opportunity to discuss how my skills align with your development needs. Best regards, Deepanshu"
-    },
-    {
-      id: 4,
-      name: "HCL",
-      email: "recruit@hcl.com",
-      role: "Node.js Developer",
-      date: "29 May 2026",
-      group: "Today",
-      seen: false,
-      time: "9:15 AM",
-      subject: "Application for Node.js Developer Position",
-      body: "Dear Hiring Team, I am Deepanshu, a backend-focused developer with expertise in Node.js and RESTful API development. I have worked on scalable backend systems and am comfortable with database management and server-side logic. Best regards, Deepanshu"
-    },
-    {
-      id: 5,
-      name: "Accenture",
-      email: "jobs@accenture.com",
-      role: "Full Stack Developer",
-      date: "29 May 2026",
-      group: "Today",
-      seen: false,
-      time: "9:20 AM",
-      subject: "Application for Full Stack Developer Position",
-      body: "Dear Hiring Team, I am Deepanshu, a Full Stack Developer with a comprehensive understanding of both frontend and backend technologies. I enjoy solving complex problems and building seamless user experiences. Best regards, Deepanshu"
-    },
-    {
-      id: 6,
-      name: "Cognizant",
-      email: "hr@cognizant.com",
-      role: "Frontend Developer",
-      date: "28 May 2026",
-      group: "Yesterday",
-      seen: true,
-      time: "10:00 AM",
-      subject: "Exploring Frontend Developer Opportunities",
-      body: "Dear Hiring Team, I am writing to express my interest in Frontend Developer roles at Cognizant. With a passion for creating intuitive web experiences, I have honed my skills in React and modern UI/UX principles. Best regards, Deepanshu"
-    },
-    {
-      id: 7,
-      name: "Tech Mahindra",
-      email: "careers@techm.com",
-      role: "React Specialist",
-      date: "28 May 2026",
-      group: "Yesterday",
-      seen: false,
-      time: "11:30 AM",
-      subject: "Application: React Specialist Role",
-      body: "Dear HR Team, I am a specialized React developer with extensive experience in state management and component architecture. I am impressed by Tech Mahindra's innovative projects and would love to be a part of your team. Best regards, Deepanshu"
-    },
-    {
-      id: 8,
-      name: "Capgemini",
-      email: "jobs@capgemini.com",
-      role: "MERN Stack Engineer",
-      date: "28 May 2026",
-      group: "Yesterday",
-      seen: true,
-      time: "2:15 PM",
-      subject: "Technical Application: MERN Stack Engineer",
-      body: "Dear Recruitment Team, my background in MERN stack development has prepared me well for the Engineer position at Capgemini. I have a proven track record of delivering robust web solutions. Best regards, Deepanshu"
-    },
-    {
-      id: 9,
-      name: "Mphasis",
-      email: "hr@mphasis.com",
-      role: "Web Developer",
-      date: "28 May 2026",
-      group: "Yesterday",
-      seen: false,
-      time: "4:00 PM",
-      subject: "Application for Web Developer",
-      body: "Dear Hiring Manager, I am a versatile Web Developer with skills ranging from HTML/CSS to advanced JavaScript frameworks. I am eager to bring my technical expertise to Mphasis. Best regards, Deepanshu"
-    },
-    {
-      id: 10,
-      name: "Persistent",
-      email: "careers@persistent.com",
-      role: "Software Engineer",
-      date: "28 May 2026",
-      group: "Yesterday",
-      seen: true,
-      time: "5:45 PM",
-      subject: "Application for Software Engineer Trainee",
-      body: "Dear Team, as a recent graduate with strong fundamentals in software engineering and web technologies, I am excited about the prospect of starting my career at Persistent Systems. Best regards, Deepanshu"
+  // 1. Fetch Companies on Mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setLoadingCompanies(true);
+      setError(null);
+      try {
+        const res = await fetch(`${BASE_URL}/api/companies`, {
+          headers: {
+            "Authorization": `Bearer ${getToken()}`
+          }
+        });
+        
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("Admin access required to view companies and emails.");
+        }
+        
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "Failed to fetch companies");
+        
+        setCompanies(data.data || []);
+      } catch (err) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+    
+    fetchCompanies();
+  }, []);
+
+  // 2. Fetch Email Logs when a company is selected
+  useEffect(() => {
+    if (!selectedId) {
+      setSelectedLogs([]);
+      return;
     }
-  ];
+    
+    const fetchLogs = async () => {
+      setLoadingLogs(true);
+      try {
+        const res = await fetch(`${BASE_URL}/api/emails/company/${selectedId}`, {
+          headers: {
+            "Authorization": `Bearer ${getToken()}`
+          }
+        });
+        
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("Admin access required to view emails.");
+        }
+        
+        const data = await res.json();
+        if (data.success) {
+          // Keep API chronological ordering
+          setSelectedLogs(data.data || []);
+        } else {
+          setSelectedLogs([]);
+        }
+      } catch (err) {
+        console.error("Error fetching logs:", err);
+        setSelectedLogs([]);
+      } finally {
+        setLoadingLogs(false);
+      }
+    };
+    
+    fetchLogs();
+  }, [selectedId]);
 
+  // Client-side search filtration natively
   const filteredCompanies = companies.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.role.toLowerCase().includes(searchQuery.toLowerCase())
+    c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.jobRole && c.jobRole.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const selectedCompany = companies.find(c => c.id === selectedId);
+  const selectedCompany = companies.find(c => c._id === selectedId);
+
+  // Parse readable time dynamically from timestamps
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString();
+  };
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-64px)] bg-white rounded-xl overflow-hidden shadow-xl border border-[#E2E8F0]">
+      <div className="flex h-[calc(100vh-64px)] bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-xl border border-[#E2E8F0]">
         
         {/* LEFT PANEL */}
-        <div className="w-[320px] flex flex-col border-r border-[#E2E8F0] bg-[#F8FAFC]">
+        <div className={cn(
+          "w-full md:w-[320px] flex-col border-r border-[#E2E8F0] bg-[#F8FAFC]",
+          showMobileDetail ? "hidden md:flex" : "flex"
+        )}>
           {/* Header */}
-          <div className="p-4 bg-white border-b border-[#E2E8F0] flex items-center justify-between">
-            <h1 className="text-xl font-bold text-[#0F172A]">Mails</h1>
-            <span className="bg-[#2563EB] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">10</span>
+          <div className="p-3 md:p-4 bg-white dark:bg-slate-800 border-b border-[#E2E8F0] flex items-center justify-between shadow-sm z-10"> {/* size-fix */}
+            <h1 className="text-lg md:text-xl font-bold text-[#0F172A]">Mails Database</h1> {/* size-fix */}
+            {!loadingCompanies && !error && (
+              <span className="bg-[#1740A6] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                {companies.length}
+              </span>
+            )}
           </div>
 
-          {/* Search */}
-          <div className="p-3 bg-white border-b border-[#E2E8F0]">
+          {/* Search Bar */}
+          <div className="p-2 md:p-3 bg-white dark:bg-slate-800 border-b border-[#E2E8F0]"> {/* size-fix */}
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
               <input 
                 type="text" 
-                placeholder="Search companies"
-                className="w-full bg-[#F1F5F9] border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-[#2563EB] outline-none"
+                placeholder="Search companies or roles"
+                className="w-full bg-[#F1F5F9] border-none rounded-lg py-2 pl-9 pr-3 text-sm focus:ring-1 focus:ring-[#1740A6] outline-none transition-shadow" /* size-fix py-2*/
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
 
-          {/* List */}
+          {/* Main List Box */}
           <div className="flex-1 overflow-y-auto">
-            {/* Group: Today */}
-            <div className="py-2">
-              <div className="flex items-center px-4 py-2 opacity-50">
-                <div className="flex-1 h-[1px] bg-[#E2E8F0]"></div>
-                <span className="px-3 text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Today, 29 May 2026</span>
-                <div className="flex-1 h-[1px] bg-[#E2E8F0]"></div>
+            {error ? (
+              <div className="flex flex-col items-center justify-center p-6 text-center space-y-3 h-full animate-in fade-in">
+                <div className="bg-red-50 p-3 rounded-full"><AlertCircle className="text-red-500" size={24}/></div>
+                <p className="text-red-600 font-bold text-sm leading-snug">{error}</p>
+                <p className="text-gray-400 text-xs mt-1">Check tokens or switch accounts.</p>
               </div>
-              {filteredCompanies.filter(c => c.group === "Today").map(company => (
-                <div 
-                  key={company.id}
-                  onClick={() => setSelectedId(company.id)}
-                  className={cn(
-                    "px-4 py-3 cursor-pointer transition-all hover:bg-[#F1F5F9] border-l-4",
-                    selectedId === company.id ? "bg-[#EFF6FF] border-[#2563EB]" : "border-transparent"
-                  )}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#0F172A] truncate">{company.name}</p>
-                      <p className="text-xs text-[#64748B] truncate">{company.role}</p>
-                    </div>
-                    <div className="flex flex-col items-end space-y-1 ml-2">
-                      <span className="text-[10px] text-[#94A3B8] font-medium">{company.time}</span>
-                      <div className="flex items-center space-x-1">
-                        {!company.seen && <div className="w-2 h-2 bg-[#2563EB] rounded-full"></div>}
-                        <DoubleTick seen={company.seen} size={14} />
+            ) : loadingCompanies ? (
+              <div className="flex flex-col items-center justify-center h-full space-y-3 text-[#94A3B8]">
+                <Loader2 size={24} className="animate-spin text-[#1740A6]" />
+                <p className="text-sm font-semibold tracking-wide">Syncing Nodes...</p>
+              </div>
+            ) : filteredCompanies.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-6 text-center h-full">
+                <p className="text-gray-400 font-medium text-sm">No companies match this query.</p>
+              </div>
+            ) : (
+              <div className="py-2">
+                {filteredCompanies.map(company => (
+                  <div 
+                    key={company._id}
+                    onClick={() => {
+                      setSelectedId(company._id);
+                      setShowMobileDetail(true);
+                    }}
+                    className={cn(
+                      "px-3 py-2 cursor-pointer transition-all hover:bg-[#F1F5F9] border-l-4", /* size-fix */
+                      selectedId === company._id ? "bg-[#EFF6FF] border-[#1740A6]" : "border-transparent"
+                    )}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <p className="font-bold text-sm text-[#0F172A] truncate">{company.companyName}</p> {/* size-fix text-sm */}
+                        <p className="text-[11px] font-medium text-[#64748B] truncate mt-0.5">
+                          {company.jobRole || 'Application Target'}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end space-y-1.5 shrink-0 ml-1">
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                          company.status === 'Sent' ? 'bg-green-100 text-green-700' : 
+                          company.status === 'Failed' ? 'bg-red-100 text-red-600' : 'bg-gray-200 text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {company.status}
+                        </span>
+                        {company.sentAt && (
+                           <span className="text-[10px] text-[#94A3B8] font-semibold">{formatTime(company.sentAt)}</span>
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Group: Yesterday */}
-            <div className="py-2">
-              <div className="flex items-center px-4 py-2 opacity-50">
-                <div className="flex-1 h-[1px] bg-[#E2E8F0]"></div>
-                <span className="px-3 text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Yesterday, 28 May 2026</span>
-                <div className="flex-1 h-[1px] bg-[#E2E8F0]"></div>
+                ))}
               </div>
-              {filteredCompanies.filter(c => c.group === "Yesterday").map(company => (
-                <div 
-                  key={company.id}
-                  onClick={() => setSelectedId(company.id)}
-                  className={cn(
-                    "px-4 py-3 cursor-pointer transition-all hover:bg-[#F1F5F9] border-l-4",
-                    selectedId === company.id ? "bg-[#EFF6FF] border-[#2563EB]" : "border-transparent"
-                  )}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#0F172A] truncate">{company.name}</p>
-                      <p className="text-xs text-[#64748B] truncate">{company.role}</p>
-                    </div>
-                    <div className="flex flex-col items-end space-y-1 ml-2">
-                      <span className="text-[10px] text-[#94A3B8] font-medium">{company.time}</span>
-                      <div className="flex items-center space-x-1">
-                        {!company.seen && <div className="w-2 h-2 bg-[#2563EB] rounded-full"></div>}
-                        <DoubleTick seen={company.seen} size={14} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            )}
           </div>
 
-          {/* Pagination */}
-          <div className="p-4 bg-white border-t border-[#E2E8F0] flex items-center justify-between">
+          <div className="p-4 bg-white dark:bg-slate-800 border-t border-[#E2E8F0] flex items-center justify-between">
             <button className="p-1 hover:bg-[#F1F5F9] rounded-md transition-colors text-[#94A3B8] disabled:opacity-30" disabled>
               <ChevronLeft size={18} />
             </button>
-            <span className="text-xs font-bold text-[#64748B]">Page 1 of 3</span>
-            <button className="p-1 hover:bg-[#F1F5F9] rounded-md transition-colors text-[#2563EB]">
+            <span className="text-xs font-bold text-[#64748B]">All Records</span>
+            <button className="p-1 hover:bg-[#F1F5F9] rounded-md transition-colors text-[#1740A6] disabled:opacity-30" disabled>
               <ChevronRight size={18} />
             </button>
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
-        <div className="flex-1 flex flex-col bg-white">
+        {/* RIGHT PANEL - THREAD VIEWER */}
+        <div className={cn(
+          "flex-1 flex-col bg-white dark:bg-slate-800 relative",
+          !showMobileDetail ? "hidden md:flex" : "flex w-full"
+        )}>
+          {loadingLogs ? (
+             <div className="absolute inset-0 bg-white dark:bg-slate-800/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+               <Loader2 size={32} className="animate-spin text-[#1740A6] mb-4" />
+               <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Compiling Database...</p>
+             </div>
+          ) : null}
+
           {selectedCompany ? (
             <>
-              {/* Header */}
-              <div className="p-4 bg-white border-b border-[#E2E8F0] flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-[#EFF6FF] rounded-full flex items-center justify-center text-[#2563EB] font-bold">
-                    {selectedCompany.name.charAt(0)}
+              {/* Top View Header */}
+              <div className="p-3 md:p-4 bg-white dark:bg-slate-800 border-b border-[#E2E8F0] flex items-center justify-between shadow-sm z-20"> {/* size-fix */}
+                <div className="flex items-center space-x-2 md:space-x-3"> {/* size-fix */}
+                  <button 
+                    className="md:hidden p-1 -ml-1 mr-1 hover:bg-gray-100 rounded-lg text-gray-500 dark:text-gray-400 transition-colors"  /* size-fix */
+                    onClick={() => setShowMobileDetail(false)}
+                  >
+                    <ChevronLeft size={20} /> {/* size-fix */}
+                  </button>
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[#1740A6] to-[#2563EB] rounded-lg flex items-center justify-center text-white font-extrabold text-lg shadow-inner shrink-0"> {/* size-fix */}
+                    {selectedCompany.companyName.charAt(0)}
                   </div>
-                  <div>
-                    <h2 className="font-bold text-[#0F172A]">{selectedCompany.name}</h2>
-                    <div className="flex items-center space-x-2">
-                      <p className="text-xs text-[#64748B]">{selectedCompany.email}</p>
-                      <span className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span className="text-[10px] text-green-600 font-bold">Email Sent</span>
-                      </span>
+                  <div className="min-w-0">
+                    <h2 className="font-bold text-sm md:text-base text-[#0F172A] flex items-center gap-2 truncate"> {/* size-fix */}
+
+                       {selectedCompany.companyName}
+                       {selectedCompany.replied && (
+                          <span className="bg-purple-100 text-purple-700 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded tracking-wide">Replied</span>
+                       )}
+                    </h2>
+                    <div className="flex items-center space-x-2 mt-0.5">
+                      <p className="text-xs font-medium text-[#64748B]">{selectedCompany.hrEmail || 'No HR Email Attached'}</p> {/* size-fix text-xs */}
+                      {selectedCompany.status === 'Sent' && (
+                        <span className="flex items-center space-x-1.5 ml-2 border-l border-gray-200 dark:border-slate-700 pl-3">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div> {/* size-fix */}
+                          <span className="text-[10px] tracking-wide text-green-600 font-bold uppercase">Dispatched</span> {/* size-fix text-[10px] */}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4 text-[#94A3B8]">
-                  <Search size={18} className="cursor-pointer hover:text-[#2563EB]" />
-                  <MoreVertical size={18} className="cursor-pointer hover:text-[#2563EB]" />
+                <div className="flex items-center space-x-5 text-[#94A3B8]">
+                  <Search size={20} className="cursor-pointer hover:text-[#1740A6] transition-colors" />
+                  <MoreVertical size={20} className="cursor-pointer hover:text-[#1740A6] transition-colors" />
                 </div>
               </div>
 
-              {/* Chat Area */}
-              <div className="flex-1 bg-[#F0F7FF] p-6 overflow-y-auto space-y-6">
-                <div className="flex flex-col space-y-2 max-w-[75%] ml-auto animate-fade-in">
-                  <div className="bg-[#2563EB] text-white p-5 rounded-2xl rounded-tr-none shadow-md">
-                    <p className="text-sm font-bold mb-2 border-b border-white/20 pb-2">
-                      Subject: {selectedCompany.subject}
-                    </p>
-                    <p className="text-sm leading-relaxed opacity-95">
-                      {selectedCompany.body}
-                    </p>
-                    <div className="flex items-center justify-end space-x-1 mt-2">
-                      <span className="text-[10px] opacity-70">{selectedCompany.time}</span>
-                      <DoubleTick seen={selectedCompany.seen} size={14} />
+              {/* Central Logs Feed */}
+              <div className="flex-1 bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] p-4 md:p-6 overflow-y-auto space-y-4"> {/* size-fix */}
+                 {selectedLogs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full space-y-2 opacity-60">
+                       <Mail size={24} className="text-[#94A3B8]"/> {/* size-fix */}
+                       <p className="text-sm font-semibold tracking-wide text-[#64748B]">No emails logged against this company yet.</p>
                     </div>
-                  </div>
-                </div>
+                 ) : (
+                    selectedLogs.map((log) => (
+                      <div key={log._id} className={`flex flex-col space-y-1.5 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 ${ /* size-fix space-y-1.5 */
+                         log.status === 'Sent' ? 'ml-auto' : 'mr-auto'
+                      }`}>
+                         <div className="flex items-center gap-2 mb-1 px-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{formatDate(log.createdAt)}</span>
+                         </div>
+                         <div className={`p-3 md:p-4 rounded-xl shadow-sm border ${ /* size-fix p-3 md:p-4 rounded-xl */
+                            log.status === 'Sent' 
+                              ? 'bg-[#1740A6] text-white rounded-tr-none border-[#0D2B75]' 
+                              : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-tl-none border-gray-200 dark:border-slate-700'
+                         }`}>
+                           {log.subject && (
+                              <p className={`text-sm font-bold mb-3 pb-2 border-b ${
+                                 log.status === 'Sent' ? 'border-white/20' : 'border-gray-100 dark:border-slate-800'
+                              }`}>
+                                Subject: {log.subject}
+                              </p>
+                           )}
+                           <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium" style={{ opacity: log.status === 'Sent' ? 0.9 : 1 }}>
+                             {log.body}
+                           </p>
+                           <div className="flex items-center justify-end space-x-1.5 mt-3 pt-2">
+                             {log.status === 'Failed' && <AlertCircle size={14} className="text-red-400 mr-1" />}
+                             <span className="text-[10px] font-bold tracking-wider" style={{ opacity: log.status === 'Sent' ? 0.6 : 0.4 }}>
+                               {formatTime(log.createdAt)}
+                             </span>
+                             {log.status === 'Sent' && <DoubleTick seen={true} size={15} />}
+                           </div>
+                         </div>
+                      </div>
+                    ))
+                 )}
               </div>
 
-              {/* Footer (Simplified for viewing only) */}
-              <div className="p-4 bg-[#F8FAFC] border-t border-[#E2E8F0] flex items-center space-x-4">
-                <Paperclip size={20} className="text-[#94A3B8] cursor-pointer hover:text-[#2563EB]" />
-                <div className="flex-1 bg-white rounded-lg px-4 py-2 text-sm text-[#94A3B8] italic">
-                  This is a record of your sent application.
+              {/* View Only Banner */}
+              <div className="p-3 bg-white dark:bg-slate-800 border-t border-[#E2E8F0] shadow-2xl flex items-center space-x-3 z-20"> {/* size-fix */}
+                <Paperclip size={18} className="text-[#94A3B8] cursor-not-allowed opacity-50 hidden sm:block" /> {/* size-fix */}
+                <div className="flex-1 bg-[#F8FAFC] border border-gray-100 dark:border-slate-800 rounded-lg px-3 py-2 text-xs text-[#94A3B8] font-bold italic shadow-inner"> {/* size-fix */}
+                  View-only mode active. Active SMTP bridges are managed by the CRON server.
                 </div>
-                <button className="p-2 bg-[#2563EB] text-white rounded-full shadow-md hover:bg-[#1d4ed8] transition-all">
-                  <Send size={18} />
+                <button disabled className="p-2 bg-[#E2E8F0] text-white rounded-lg cursor-not-allowed"> {/* size-fix */}
+                  <Send size={16} /> {/* size-fix */}
                 </button>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-10 space-y-4">
-              <div className="w-20 h-20 bg-[#F0F7FF] rounded-full flex items-center justify-center text-[#2563EB]">
-                <Mail size={40} />
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3 bg-gradient-to-b from-[#F8FAFC] to-white"> {/* size-fix */}
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-[#1740A6] shadow-sm mb-1 border border-blue-100/50"> {/* size-fix */}
+                <Mail size={32} className="stroke-[1.5]" /> {/* size-fix */}
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#0F172A]">Select a company to view mail</h3>
-                <p className="text-[#64748B] text-sm max-w-xs mx-auto">
-                  Click on any company from the list on the left to see the email conversation and status.
+                <h3 className="text-lg md:text-xl font-bold text-[#0F172A] tracking-tight">Database Viewer</h3> {/* size-fix */}
+                <p className="text-[#64748B] text-sm mt-2 max-w-sm mx-auto font-medium">
+                  Select a company from the registry on the left to sync remote email threads and delivery statuses.
                 </p>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { 
   User, Mail, Phone, MapPin, Globe, 
   Briefcase, Code, 
@@ -6,6 +6,10 @@ import {
   ExternalLink 
 } from "lucide-react";
 import { DashboardLayout } from "../layouts/DashboardLayout";
+import { isGuest, getToken } from "../utils/auth";
+import { guestData } from "../utils/guestData";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 // Inline SVG icons not available in installed lucide-react version
 const LinkedinIcon = ({ size = 18, className = "" }) => (
@@ -25,7 +29,7 @@ const GithubIcon = ({ size = 18, className = "" }) => (
 // ─── Validation Helpers ───────────────────────────────────
 const validators = {
   fullName: (v) => {
-    const val = v.trim();
+    const val = v?.trim() || "";
     if (!val) return "Name is required";
     if (!/^[a-zA-Z\s]+$/.test(val)) return "Name can only contain letters and spaces";
     if (val.length < 2) return "Name must be at least 2 characters";
@@ -33,55 +37,46 @@ const validators = {
     return "";
   },
   email: (v) => {
-    const val = v.trim();
+    const val = v?.trim() || "";
     if (!val) return "Email is required";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return "Please enter a valid email address (e.g. name@gmail.com)";
     return "";
   },
   mobile: (v) => {
-    const val = v.trim().replace(/^\+91\s?/, "");
+    const val = v?.trim().replace(/^\+91\s?/, "") || "";
     if (!val) return "Mobile number is required";
     if (!/^\d+$/.test(val)) return "Mobile number can only contain digits";
     if (val.length !== 10) return "Mobile number must be exactly 10 digits";
-    if (!/^[6-9]/.test(val)) return "Please enter a valid Indian mobile number";
+    if (!/^[6-9]/.test(val)) return "Please enter a valid Indian mobile number starting with 6-9";
     return "";
   },
   role: (v) => (!v || !v.trim() ? "Please select your current role" : ""),
   address: (v) => {
-    const val = v.trim();
+    const val = v?.trim() || "";
     if (!val) return "Address is required";
     if (val.length < 10) return "Please enter a complete address";
     if (val.length > 200) return "Address must be under 200 characters";
     return "";
   },
-  linkedin: (v) => {
-    const val = v.trim();
-    if (!val) return "";
-    if (/\s/.test(val)) return "URL cannot contain spaces";
-    if (!val.includes("linkedin.com/in/")) return "Please enter a valid LinkedIn URL (e.g. linkedin.com/in/your-name)";
-    return "";
-  },
-  github: (v) => {
-    const val = v.trim();
-    if (!val) return "";
-    if (/\s/.test(val)) return "URL cannot contain spaces";
-    if (!val.includes("github.com/")) return "Please enter a valid GitHub URL (e.g. github.com/your-username)";
-    return "";
-  },
-  portfolio: (v) => {
-    const val = v.trim();
-    if (!val) return "";
-    if (/\s/.test(val)) return "URL cannot contain spaces";
-    if (!val.includes(".")) return "Please enter a valid website URL";
-    return "";
-  },
-  salary: (v) => (!v || !v.trim() ? "Please select expected salary range" : ""),
+  linkedin: (v) => validateSocialUrl(v, "linkedin.com/in/"),
+  github: (v) => validateSocialUrl(v, "github.com/"),
+};
+
+const validateSocialUrl = (v, domainPath) => {
+  const val = v?.trim() || "";
+  if (!val) return "URL is required for " + domainPath.split(".")[0];
+  if (/\s/.test(val)) return "URL cannot contain spaces";
+  if (val.includes("javascript:") || val.includes("<") || val.includes(">")) return "URL contains invalid characters";
+  if (!val.includes(domainPath)) return `Please enter a valid URL containing ${domainPath}`;
+  const parts = val.split(domainPath);
+  if (parts.length < 2 || !/[A-Za-z]/.test(parts[1])) return "Slug must contain at least one letter";
+  return "";
 };
 
 const validateLanguageTag = (val, existing) => {
   const v = val.trim();
   if (!v) return "Language name cannot be empty";
-  if (!/^[a-zA-Z\s]+$/.test(v)) return "Language name can only contain letters";
+  if (v.includes("<") || v.includes(">")) return "Disallowed characters";
   if (v.length < 2) return "Language must be at least 2 characters";
   if (v.length > 30) return "Language must be under 30 characters";
   if (existing.map(l => l.toLowerCase()).includes(v.toLowerCase())) return "This language is already added";
@@ -91,9 +86,21 @@ const validateLanguageTag = (val, existing) => {
 const validateSkillTag = (val, existing) => {
   const v = val.trim();
   if (!v) return "Skill name cannot be empty";
-  if (!/^[a-zA-Z0-9.+\s]+$/.test(v)) return "Skill can contain letters, numbers, dots, +, spaces";
+  if (v.includes("<") || v.includes(">")) return "Disallowed characters";
+  if (v.length < 2) return "Skill must be at least 2 characters";
   if (v.length > 30) return "Skill must be under 30 characters";
   if (existing.map(s => s.toLowerCase()).includes(v.toLowerCase())) return "This skill is already added";
+  return "";
+};
+
+const validateLocationTag = (val, existing) => {
+  const v = val.trim();
+  if (!v) return "Location string cannot be empty";
+  if (v.includes("<") || v.includes(">")) return "Disallowed characters";
+  if (v.length < 2) return "Location must be at least 2 characters";
+  if (v.length > 40) return "Location must be under 40 characters";
+  if (existing.length >= 10) return "Maximum 10 locations allowed";
+  if (existing.map(loc => loc.toLowerCase()).includes(v.toLowerCase())) return "This location is already added";
   return "";
 };
 
@@ -105,55 +112,164 @@ const FieldError = ({ error }) => {
 
 // ─── Main Profile Component ──────────────────────────────
 const Profile = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [toastMsg, setToastMsg] = useState("Profile updated successfully ✓");
+  const [toastMsg, setToastMsg] = useState("");
   const [toastColor, setToastColor] = useState("#10B981");
-  
-  // Profile Data States
+
   const [profile, setProfile] = useState({
-    fullName: "Deepanshu",
-    email: "deepubhati0051@gmail.com",
-    mobile: "+91 9560287251",
-    role: "Full Stack Developer",
-    address: "Greater Noida, Uttar Pradesh",
-    avatar: null,
-    linkedin: "linkedin.com/in/deepanshu-bhati",
-    github: "github.com/deepanshu0051",
-    portfolio: "yourportfolio.com",
-    jobType: "Full Time",
-    salary: "8-12 LPA",
+    fullName: "", email: "", mobile: "", role: "", address: "", avatar: "",
+    linkedin: "", github: "",
+    jobType: "Full Time", expectedSalaryMinLpa: 1, expectedSalaryMaxLpa: 2,
     availability: "Immediately Available"
   });
 
-  const [languages, setLanguages] = useState(["Hindi", "English"]);
-  const [skills, setSkills] = useState([
-    "React.js", "Node.js", "Express.js", "MongoDB", 
-    "MySQL", "JavaScript", "REST APIs", "JWT Auth", 
-    "Git", "GitHub"
-  ]);
-  const [prefLocations, setPrefLocations] = useState(["Noida", "Delhi", "Greater Noida", "Remote"]);
-  
+  const [languages, setLanguages] = useState([]);
+  const [skills, setSkills] = useState([]);
+  const [prefLocations, setPrefLocations] = useState([]);
+
   const [newLanguage, setNewLanguage] = useState("");
   const [newSkill, setNewSkill] = useState("");
   const [newLocation, setNewLocation] = useState("");
 
-  // ─── Validation error states ────────────────────────────
   const [errors, setErrors] = useState({});
-  const [tagErrors, setTagErrors] = useState({ language: "", skill: "" });
+  const [tagErrors, setTagErrors] = useState({ language: "", skill: "", location: "" });
 
   const fileInputRef = useRef(null);
-  const firstErrorRef = useRef(null);
+
+  const displayToast = (message, color = "#10B981") => {
+    setToastMsg(message);
+    setToastColor(color);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
+  // 1) Fetch data from MongoDB on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/profile`, {
+          headers: { "Authorization": `Bearer ${getToken()}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          hydrateState(data);
+          
+          // One-time partial migration logic for admin: if the DB is a skeleton and we have local data, migrate it.
+          if (!isGuest()) {
+            const localRaw = localStorage.getItem("hireme_profile");
+            if (localRaw && (!data.fullName || data.fullName.trim() === "")) {
+              try {
+                const localData = JSON.parse(localRaw);
+                if (localData.profile) hydrateState({ ...localData.profile, ...localData });
+              } catch (e) {
+                console.error("Migration failed", e);
+              }
+            }
+          }
+        } else {
+          displayToast("Failed to fetch profile", "#EF4444");
+        }
+      } catch (e) {
+        displayToast("Network Error fetching profile", "#EF4444");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const hydrateState = (data) => {
+    setProfile(prev => ({
+      ...prev,
+      fullName: data.fullName || "",
+      email: data.email || "",
+      mobile: data.mobile || "",
+      role: data.role || "",
+      address: data.address || "",
+      avatar: data.avatar || "",
+      linkedin: data.linkedin || "",
+      github: data.github || "",
+      jobType: data.jobType || "Full Time",
+      expectedSalaryMinLpa: data.expectedSalaryMinLpa || 1,
+      expectedSalaryMaxLpa: data.expectedSalaryMaxLpa || 2,
+      availability: data.availability || "Immediately Available"
+    }));
+    setLanguages(data.languages || []);
+    setSkills(data.skills || []);
+    setPrefLocations(data.prefLocations || []);
+  };
+
+  // 2) API Push Helper
+  const pushToApi = async (dataToSave) => {
+    if (isGuest()) {
+      displayToast("Guest mode — saving disabled. Admin access only.", "#EF4444");
+      return false;
+    }
+    
+    try {
+      const res = await fetch(`${BASE_URL}/api/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getToken()}`
+        },
+        body: JSON.stringify(dataToSave)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        hydrateState(data); // Sync completely with server format
+        displayToast("Profile saved successfully", "#10B981");
+        
+        // Clean up legacy localStorage if it exists
+        localStorage.removeItem("hireme_profile");
+        return true;
+      } else {
+        const err = await res.json();
+        displayToast(err.message || "Failed to save profile", "#EF4444");
+        return false;
+      }
+    } catch (error) {
+      displayToast("Network error saving profile", "#EF4444");
+      return false;
+    }
+  };
+
+  const getFullPayload = (overrides = {}) => {
+    return {
+      ...profile,
+      languages,
+      skills,
+      prefLocations,
+      ...overrides
+    };
+  };
+
+  // ─── Inline Link Editing Handler ───────────────────────
+  const handleInlineLinkSave = async (name, newValue) => {
+    if (isGuest()) {
+      displayToast("Guest mode — saving disabled. Admin access only.", "#EF4444");
+      return "Guest mode";
+    }
+
+    const val = newValue.trim();
+    const err = validators[name](val);
+    if (err) return err;
+
+    setProfile(prev => ({ ...prev, [name]: val }));
+    const success = await pushToApi(getFullPayload({ [name]: val }));
+    return success ? "" : "Failed API";
+  };
 
   const setFieldError = (name, msg) => setErrors(prev => ({ ...prev, [name]: msg }));
   const clearFieldError = (name) => setErrors(prev => ({ ...prev, [name]: "" }));
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    // Strip invalid input on paste for name-only / number-only fields
     let sanitized = value;
     if (name === "fullName") sanitized = value.replace(/[^a-zA-Z\s]/g, "");
-    if (name === "mobile") sanitized = value.replace(/[^0-9+\s]/g, "");
+    if (name === "mobile") sanitized = value.replace(/\D/g, "");
     setProfile(prev => ({ ...prev, [name]: sanitized }));
     clearFieldError(name);
   };
@@ -165,46 +281,49 @@ const Profile = () => {
   };
 
   const handleAvatarChange = (e) => {
+    if (isGuest()) {
+      displayToast("Guest mode — saving disabled. Admin access only.", "#EF4444");
+      return;
+    }
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile(prev => ({ ...prev, avatar: reader.result }));
+      reader.onloadend = async () => {
+        const base64 = reader.result;
+        setProfile(prev => ({ ...prev, avatar: base64 }));
+        pushToApi(getFullPayload({ avatar: base64 }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // ─── Full validate on Save ──────────────────────────────
-  const handleSave = () => {
-    // Trim all values
+  // ─── Full validate on Top-Level Save ──────────────────────────────
+  const handleSave = async () => {
+    if (isGuest()) {
+      displayToast("Guest mode — saving disabled. Admin access only.", "#EF4444");
+      setIsEditing(false);
+      return;
+    }
+
     const trimmedProfile = { ...profile };
     Object.keys(trimmedProfile).forEach(k => {
       if (typeof trimmedProfile[k] === "string") trimmedProfile[k] = trimmedProfile[k].trim();
     });
-    setProfile(trimmedProfile);
 
-    // Run all validators
     const newErrors = {};
-    ["fullName", "email", "mobile", "role", "address", "linkedin", "github", "portfolio", "salary"].forEach(field => {
+    ["fullName", "email", "mobile", "role", "address"].forEach(field => {
       const fn = validators[field];
       if (fn) {
         const err = fn(trimmedProfile[field]);
         if (err) newErrors[field] = err;
       }
     });
-    if (languages.length === 0) newErrors["languages"] = "Please add at least one language";
-    if (skills.length === 0) newErrors["skills"] = "Please add at least one skill";
 
     setErrors(newErrors);
 
     const hasErrors = Object.values(newErrors).some(v => v);
     if (hasErrors) {
-      setToastMsg("Please fix all errors before saving");
-      setToastColor("#EF4444");
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-      // Scroll to first error
+      displayToast("Please fix all errors before saving", "#EF4444");
       setTimeout(() => {
         const el = document.querySelector("[data-validation-error='true']");
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -212,15 +331,15 @@ const Profile = () => {
       return;
     }
 
-    setIsEditing(false);
-    setToastMsg("Saved successfully ✓");
-    setToastColor("#10B981");
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-    setErrors({});
+    const payload = getFullPayload();
+    const success = await pushToApi(payload);
+    if (success) {
+      setIsEditing(false);
+      setErrors({});
+    }
   };
 
-  // Tag Handlers with validation
+  // Tag Handlers
   const addTag = (type) => {
     if (type === "language") {
       const err = validateLanguageTag(newLanguage, languages);
@@ -237,8 +356,11 @@ const Profile = () => {
       setTagErrors(p => ({ ...p, skill: "" }));
       clearFieldError("skills");
     } else if (type === "location" && newLocation.trim()) {
+      const err = validateLocationTag(newLocation, prefLocations);
+      if (err) { setTagErrors(p => ({ ...p, location: err })); return; }
       setPrefLocations([...prefLocations, newLocation.trim()]);
       setNewLocation("");
+      setTagErrors(p => ({ ...p, location: "" }));
     }
   };
 
@@ -248,7 +370,73 @@ const Profile = () => {
     else if (type === "location") setPrefLocations(prefLocations.filter(t => t !== tagToRemove));
   };
 
-  // Border color helper
+
+  // --- Global Job Preferences UX Handlers ---
+  const [isEditingPrefs, setIsEditingPrefs] = useState(false);
+  const [jobPrefsBackup, setJobPrefsBackup] = useState({});
+  const [salMin, setSalMin] = useState("");
+  const [salMax, setSalMax] = useState("");
+  const [salErr, setSalErr] = useState("");
+
+  const handleEditPrefsStart = () => {
+    setJobPrefsBackup({
+      jobType: profile.jobType,
+      expectedSalaryMinLpa: profile.expectedSalaryMinLpa,
+      expectedSalaryMaxLpa: profile.expectedSalaryMaxLpa,
+      availability: profile.availability,
+      prefLocations: [...prefLocations]
+    });
+    setSalMin(profile.expectedSalaryMinLpa || "");
+    setSalMax(profile.expectedSalaryMaxLpa || "");
+    setIsEditingPrefs(true);
+  };
+
+  const handleEditPrefsCancel = () => {
+    setProfile(p => ({
+      ...p,
+      jobType: jobPrefsBackup.jobType,
+      expectedSalaryMinLpa: jobPrefsBackup.expectedSalaryMinLpa,
+      expectedSalaryMaxLpa: jobPrefsBackup.expectedSalaryMaxLpa,
+      availability: jobPrefsBackup.availability
+    }));
+    setPrefLocations(jobPrefsBackup.prefLocations);
+    setSalErr("");
+    setIsEditingPrefs(false);
+  };
+
+  const handleEditPrefsSave = async () => {
+    if (isGuest()) {
+      displayToast("Guest mode — saving disabled. Admin access only.", "#EF4444");
+      handleEditPrefsCancel();
+      return;
+    }
+
+    const min = parseInt(salMin, 10);
+    const max = parseInt(salMax, 10);
+    if (!salMin || !salMax || isNaN(min) || isNaN(max) || min < 1 || max < 1 || min > 99 || max > 99) {
+      setSalErr("Requires valid digits 1-99");
+      return;
+    }
+    if (min > max) {
+      setSalErr("Min cannot exceed Max");
+      return;
+    }
+    if (prefLocations.length === 0) {
+      setSalErr(""); // clear min/max error if fixed but location empty
+      displayToast("Select at least 1 preferred location", "#EF4444");
+      return;
+    }
+    
+    setSalErr("");
+    const newProfile = { ...profile, expectedSalaryMinLpa: min, expectedSalaryMaxLpa: max };
+    setProfile(newProfile);
+    
+    const success = await pushToApi(getFullPayload({ expectedSalaryMinLpa: min, expectedSalaryMaxLpa: max }));
+    if (success) {
+      setIsEditingPrefs(false);
+    }
+  };
+
   const borderFor = (name) => {
     if (!isEditing) return undefined;
     if (errors[name]) return "1px solid #EF4444";
@@ -256,37 +444,47 @@ const Profile = () => {
     return undefined;
   };
 
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[50vh] items-center justify-center">
+          <p className="text-[#64748B] font-medium animate-pulse">Loading profile...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
-      <div className="max-w-[900px] mx-auto py-8 space-y-8 animate-fade-in relative">
+      <div className="max-w-[900px] mx-auto py-4 space-y-6 animate-fade-in relative">
         
         {/* SUCCESS/ERROR TOAST */}
         {showToast && (
-          <div className="fixed top-24 right-8 z-[100] animate-slide-in-right">
-            <div className="text-white px-6 py-3 rounded-xl shadow-lg flex items-center space-x-3" style={{ backgroundColor: toastColor }}>
-              <Check size={20} className="bg-white/20 rounded-full p-0.5" />
+          <div className="fixed bottom-8 right-8 z-[200] animate-slide-in-right">
+            <div className={`text-white px-4 py-2 rounded-xl shadow-lg flex items-center space-x-3`} style={{ backgroundColor: toastColor }}>
+              <Check size={20} className="bg-white dark:bg-slate-800/20 rounded-full p-0.5" />
               <span className="font-bold text-sm">{toastMsg}</span>
             </div>
           </div>
         )}
 
         {/* TOP SECTION - HERO CARD */}
-        <div className="bg-white border border-[#BFDBFE] rounded-[16px] p-8 shadow-[0_4px_20px_rgba(37,99,235,0.08)] flex flex-col md:flex-row items-center md:items-start justify-between gap-8 relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 border border-[#BFDBFE] rounded-lg p-6 shadow-[0_4px_20px_rgba(37,99,235,0.08)] flex flex-col md:flex-row items-center md:items-start justify-between gap-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16"></div>
           
-          <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 z-10">
+          <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 z-10">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-[120px] h-[120px] rounded-full border-4 border-[#EFF6FF] bg-[#F1F5F9] flex items-center justify-center overflow-hidden shadow-sm">
+              <div className="w-[80px] h-[80px] md:w-[100px] md:h-[100px] rounded-full border-4 border-[#EFF6FF] bg-[#F1F5F9] flex items-center justify-center overflow-hidden shadow-sm">
                 {profile.avatar ? (
                   <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <User size={60} className="text-[#94A3B8]" />
+                  <User size={40} className="text-[#94A3B8]" />
                 )}
               </div>
               <button 
                 onClick={() => fileInputRef.current.click()}
-                className="absolute bottom-1 right-1 bg-white border border-[#E2E8F0] p-2 rounded-full shadow-md text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all"
+                className="absolute bottom-1 right-1 bg-white dark:bg-slate-800 border border-[#E2E8F0] p-2 rounded-full shadow-md text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all"
               >
                 <Camera size={16} />
               </button>
@@ -301,46 +499,51 @@ const Profile = () => {
 
             {/* Basic Info */}
             <div className="text-center md:text-left space-y-1">
-              <h1 className="text-3xl font-bold text-[#0F172A]">{profile.fullName}</h1>
-              <p className="text-[#64748B] font-medium text-sm">{profile.role}</p>
+              <h1 className="text-lg md:text-xl font-bold text-[#0F172A]">{profile.fullName || "User Name"}</h1>
+              <p className="text-[#64748B] font-medium text-xs">{profile.role || "Role not set"}</p>
               <div className="flex items-center justify-center md:justify-start space-x-2 text-[#94A3B8] text-xs pt-1">
                 <MapPin size={12} />
-                <span>{profile.address}</span>
+                <span>{profile.address || "Location not set"}</span>
               </div>
               
               {/* Quick Stats */}
               <div className="flex items-center justify-center md:justify-start space-x-3 pt-4">
                 <span className="bg-[#EFF6FF] text-[#2563EB] text-[10px] font-bold px-3 py-1 rounded-full border border-[#BFDBFE]">
-                  5 Emails/day
+                  Profile Ready
                 </span>
                 <span className="bg-[#DCFCE7] text-[#166534] text-[10px] font-bold px-3 py-1 rounded-full border border-[#BBF7D0]">
-                  Auto-send ON
-                </span>
-                <span className="bg-[#F5F3FF] text-[#5B21B6] text-[10px] font-bold px-3 py-1 rounded-full border border-[#DDD6FE]">
-                  24 Applied
+                  Connected
                 </span>
               </div>
             </div>
           </div>
 
-          <button 
-            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-            className={`z-10 flex items-center space-x-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md group ${
-              isEditing 
-                ? "bg-[#2563EB] text-white hover:bg-[#1d4ed8]" 
-                : "border border-[#BFDBFE] text-[#2563EB] bg-white hover:bg-[#EFF6FF]"
-            }`}
-          >
-            {isEditing ? <Save size={16} /> : <Edit3 size={16} />}
-            <span>{isEditing ? "Save Changes" : "Edit Profile"}</span>
-          </button>
+          <div className="flex flex-col gap-2 relative z-10 items-end">
+            {isGuest() && (
+              <div className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-500 dark:text-gray-400 rounded-lg font-bold text-xs border border-[#E2E8F0] shadow-sm cursor-help" title="Guest interactions disabled for DB">
+                <span>View Only (Guest Mode)</span>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+              className={`flex items-center justify-center space-x-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md group ${
+                isEditing 
+                  ? "bg-[#2563EB] text-white hover:bg-[#1d4ed8]" 
+                  : "border border-[#BFDBFE] text-[#2563EB] bg-white dark:bg-slate-800 hover:bg-[#EFF6FF]"
+              }`}
+            >
+              {isEditing ? <Save size={14} /> : <Edit3 size={14} />}
+              <span>{isEditing ? "Save Changes" : "Edit Profile"}</span>
+            </button>
+          </div>
         </div>
 
         {/* SECTION 2 - PERSONAL INFORMATION */}
-        <div className="bg-white border border-[#E2E8F0] rounded-[14px] p-6 shadow-sm space-y-6">
-          <div className="flex items-center space-x-3 border-b border-[#F1F5F9] pb-4">
-            <User size={20} className="text-[#2563EB]" />
-            <h2 className="text-lg font-bold text-[#0F172A]">Personal Information</h2>
+        <div className="bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
+          <div className="flex items-center space-x-2 border-b border-[#F1F5F9] pb-3">
+            <User size={18} className="text-[#2563EB]" />
+            <h2 className="text-base md:text-lg font-bold text-[#0F172A]">Personal Information</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -374,9 +577,10 @@ const Profile = () => {
                     value={profile.role}
                     onChange={handleInputChange}
                     onBlur={() => handleBlur("role")}
-                    className="w-full bg-white rounded-lg py-3 pl-10 pr-4 text-sm font-medium outline-none shadow-sm"
+                    className="w-full bg-white dark:bg-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm font-medium outline-none shadow-sm"
                     style={{ border: borderFor("role") || "1px solid #2563EB" }}
                   >
+                    <option value="">Select Role</option>
                     {[
                       "Full Stack Developer", "Frontend Developer", "Backend Developer", 
                       "MERN Stack Developer", "React Developer", "Software Engineer", 
@@ -384,8 +588,8 @@ const Profile = () => {
                     ].map(role => <option key={role} value={role}>{role}</option>)}
                   </select>
                 ) : (
-                  <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-3 pl-10 pr-4 text-sm font-semibold text-[#0F172A]">
-                    {profile.role}
+                  <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-2 pl-10 pr-4 text-sm font-semibold text-[#0F172A]">
+                    {profile.role || "-"}
                   </div>
                 )}
               </div>
@@ -404,7 +608,7 @@ const Profile = () => {
             {/* Languages Known */}
             <div className="md:col-span-2 space-y-3" data-validation-error={!!errors.languages || undefined}>
               <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider pl-1">Languages Known</label>
-              <div className={`flex flex-wrap gap-2 p-3 rounded-xl border ${isEditing ? "border-[#BFDBFE] bg-white" : "border-[#E2E8F0] bg-[#F8FAFC]"}`}>
+              <div className={`flex flex-wrap gap-2 p-3 rounded-xl border ${isEditing ? "border-[#BFDBFE] bg-white dark:bg-slate-800" : "border-[#E2E8F0] bg-[#F8FAFC]"}`}>
                 {languages.map(lang => (
                   <Tag 
                     key={lang} 
@@ -414,7 +618,7 @@ const Profile = () => {
                   />
                 ))}
                 {isEditing && (
-                  <div className="flex items-center bg-white border border-[#E2E8F0] rounded-lg pl-3 pr-1 py-1 ml-1 shadow-sm">
+                  <div className="flex items-center bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg pl-3 pr-1 py-1 ml-1 shadow-sm">
                     <input 
                       type="text" 
                       placeholder="Add language" 
@@ -438,14 +642,14 @@ const Profile = () => {
         </div>
 
         {/* SECTION 3 - SKILLS */}
-        <div className="bg-white border border-[#E2E8F0] rounded-[14px] p-6 shadow-sm space-y-6" data-validation-error={!!errors.skills || undefined}>
-          <div className="flex items-center space-x-3 border-b border-[#F1F5F9] pb-4">
-            <Code size={20} className="text-[#2563EB]" />
-            <h2 className="text-lg font-bold text-[#0F172A]">My Skills <span className="text-xs font-medium text-[#94A3B8] ml-2">✨ Sparkle magic</span></h2>
+        <div className="bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4" data-validation-error={!!errors.skills || undefined}>
+          <div className="flex items-center space-x-2 border-b border-[#F1F5F9] pb-3">
+            <Code size={18} className="text-[#2563EB]" />
+            <h2 className="text-base md:text-lg font-bold text-[#0F172A]">My Skills <span className="text-xs font-medium text-[#94A3B8] ml-2">✨ Sparkle magic</span></h2>
           </div>
 
           <div className="space-y-6">
-            <div className={`flex flex-wrap gap-3 p-4 rounded-xl border ${isEditing ? "border-[#BFDBFE] bg-white" : "border-transparent bg-[#F0F7FF]/50"}`}>
+            <div className={`flex flex-wrap gap-3 p-4 rounded-xl border ${isEditing ? "border-[#BFDBFE] bg-white dark:bg-slate-800" : "border-transparent bg-[#F0F7FF]/50"}`}>
               {skills.map(skill => (
                 <div key={skill} className="bg-[#EFF6FF] border border-[#BFDBFE] text-[#1E40AF] px-4 py-1.5 rounded-full text-xs font-bold flex items-center space-x-2 animate-fade-in group shadow-sm transition-all hover:bg-[#DBEAFE] hover:border-[#3B82F6]">
                   <span>{skill}</span>
@@ -460,18 +664,18 @@ const Profile = () => {
 
             {isEditing && (
               <div className="space-y-1">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <input 
                     type="text" 
                     placeholder="Type skill name..." 
-                    className="flex-1 bg-white border border-[#E2E8F0] rounded-lg px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-[#2563EB] transition-all"
+                    className="flex-1 bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#2563EB] transition-all"
                     value={newSkill}
                     onChange={(e) => { setNewSkill(e.target.value); setTagErrors(p => ({ ...p, skill: "" })); }}
                     onKeyDown={(e) => e.key === "Enter" && addTag("skill")}
                   />
                   <button 
                     onClick={() => addTag("skill")}
-                    className="bg-[#2563EB] text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-md hover:bg-[#1d4ed8]"
+                    className="bg-[#2563EB] text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md hover:bg-[#1d4ed8]"
                   >
                     Add Skill
                   </button>
@@ -483,63 +687,81 @@ const Profile = () => {
         </div>
 
         {/* SECTION 4 - SOCIAL LINKS */}
-        <div className="bg-white border border-[#E2E8F0] rounded-[14px] p-6 shadow-sm space-y-6">
-          <div className="flex items-center space-x-3 border-b border-[#F1F5F9] pb-4">
-            <Globe size={20} className="text-[#2563EB]" />
-            <h2 className="text-lg font-bold text-[#0F172A]">Social Links</h2>
+        <div className="bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
+          <div className="flex items-center space-x-2 border-b border-[#F1F5F9] pb-3">
+            <Globe size={18} className="text-[#2563EB]" />
+            <h2 className="text-base md:text-lg font-bold text-[#0F172A]">Social Links</h2>
           </div>
 
           <div className="space-y-4">
             <SocialLinkInput 
               icon={<LinkedinIcon size={18} className="text-[#0077B5]" />}
               label="LinkedIn URL" name="linkedin" value={profile.linkedin}
-              placeholder="linkedin.com/in/your-profile" isEditing={isEditing}
-              onChange={handleInputChange} onBlur={() => handleBlur("linkedin")}
-              error={errors.linkedin} borderOverride={borderFor("linkedin")}
+              placeholder="https://linkedin.com/in/your-profile"
+              onInlineSave={(val) => handleInlineLinkSave("linkedin", val)}
             />
             <SocialLinkInput 
               icon={<GithubIcon size={18} className="text-[#181717]" />}
               label="GitHub URL" name="github" value={profile.github}
-              placeholder="github.com/your-username" isEditing={isEditing}
-              onChange={handleInputChange} onBlur={() => handleBlur("github")}
-              error={errors.github} borderOverride={borderFor("github")}
-            />
-            <SocialLinkInput 
-              icon={<Globe size={18} className="text-[#2563EB]" />}
-              label="Portfolio Website" name="portfolio" value={profile.portfolio}
-              placeholder="yourportfolio.com" isEditing={isEditing}
-              onChange={handleInputChange} onBlur={() => handleBlur("portfolio")}
-              error={errors.portfolio} borderOverride={borderFor("portfolio")}
+              placeholder="https://github.com/your-username"
+              onInlineSave={(val) => handleInlineLinkSave("github", val)}
             />
           </div>
         </div>
 
         {/* SECTION 5 - JOB PREFERENCES */}
-        <div className="bg-white border border-[#E2E8F0] rounded-[14px] p-6 shadow-sm space-y-6">
-          <div className="flex items-center space-x-3 border-b border-[#F1F5F9] pb-4">
-            <Briefcase size={20} className="text-[#2563EB]" />
-            <h2 className="text-lg font-bold text-[#0F172A]">Job Preferences</h2>
+        <div className="bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-[#F1F5F9] dark:border-slate-700 pb-3">
+            <div className="flex items-center space-x-2">
+              <Briefcase size={18} className="text-[#2563EB]" />
+              <h2 className="text-base md:text-lg font-bold text-[#0F172A] dark:text-gray-100">Job Preferences</h2>
+            </div>
+            {!isEditingPrefs ? (
+              <button 
+                onClick={handleEditPrefsStart}
+                className="flex items-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-bold text-[#2563EB] bg-[#EFF6FF] dark:bg-transparent dark:text-gray-300 dark:border dark:border-slate-700 hover:bg-[#DBEAFE] dark:hover:bg-slate-700 transition-all"
+              >
+                <Edit3 size={14} />
+                <span>Edit</span>
+              </button>
+            ) : (
+              <div className="flex space-x-2">
+                <button 
+                  onClick={handleEditPrefsCancel}
+                  className="bg-[#F8FAFC] dark:bg-slate-700 border border-[#E2E8F0] dark:border-slate-600 text-[#64748B] dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#F1F5F9] dark:hover:bg-slate-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleEditPrefsSave}
+                  className="bg-[#10B981] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#059669] shadow-sm transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Job Type */}
+            
+            {/* Preferred Job Type */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Preferred Job Type</label>
+              <label className="text-xs font-bold text-[#64748B] dark:text-gray-400 uppercase tracking-wider">Preferred Job Type</label>
               <div className="flex flex-wrap gap-2">
                 {["Full Time", "Remote", "Hybrid", "Internship"].map(type => (
                   <button 
                     key={type}
-                    disabled={!isEditing}
-                    onClick={() => setProfile(prev => ({ ...prev, jobType: type }))}
+                    onClick={() => isEditingPrefs && setProfile(prev => ({ ...prev, jobType: type }))}
+                    disabled={!isEditingPrefs}
                     className={cn(
-                      "px-4 py-2 rounded-full text-xs font-bold border transition-all",
+                      "px-3 py-1.5 rounded-full text-xs font-bold border transition-all disabled:opacity-90 disabled:cursor-default",
                       profile.jobType === type 
-                        ? "bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-100" 
-                        : "bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+                        ? "bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-100 dark:shadow-none" 
+                        : "bg-[#F8FAFC] dark:bg-slate-900 text-[#64748B] dark:text-gray-400 border-[#E2E8F0] dark:border-slate-700 hover:bg-[#F1F5F9] dark:hover:bg-slate-800"
                     )}
                   >
-                    <div className="flex items-center space-x-2">
-                      <div className={cn("w-1.5 h-1.5 rounded-full", profile.jobType === type ? "bg-white" : "bg-[#94A3B8]")}></div>
+                    <div className="flex items-center space-x-1.5">
+                      <div className={cn("w-1.5 h-1.5 rounded-full", profile.jobType === type ? "bg-white dark:bg-white" : "bg-[#94A3B8] dark:bg-slate-500")}></div>
                       <span>{type}</span>
                     </div>
                   </button>
@@ -547,26 +769,26 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Locations */}
+            {/* Preferred Locations */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Preferred Locations</label>
-              <div className="flex flex-wrap gap-2 p-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
+              <label className="text-xs font-bold text-[#64748B] dark:text-gray-400 uppercase tracking-wider">Preferred Locations</label>
+              <div className="flex flex-wrap gap-2 p-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700">
                 {prefLocations.map(loc => (
                   <Tag 
                     key={loc} 
                     label={loc} 
-                    isEditing={isEditing} 
+                    isEditing={isEditingPrefs} 
                     onRemove={() => removeTag("location", loc)}
                   />
                 ))}
-                {isEditing && (
-                  <div className="flex items-center bg-white border border-[#E2E8F0] rounded-lg px-2 py-1 ml-1">
+                {isEditingPrefs && (
+                  <div className="flex items-center bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-lg px-2 py-1 ml-1 flex-1 min-w-[100px]">
                     <input 
                       type="text" 
                       placeholder="Add city" 
-                      className="text-[10px] font-bold outline-none w-16"
+                      className="text-[10px] font-bold outline-none w-full bg-transparent text-[#0F172A] dark:text-gray-100"
                       value={newLocation}
-                      onChange={(e) => setNewLocation(e.target.value)}
+                      onChange={(e) => { setNewLocation(e.target.value); setTagErrors(p => ({ ...p, location: "" })); }}
                       onKeyDown={(e) => e.key === "Enter" && addTag("location")}
                     />
                     <button onClick={() => addTag("location")} className="ml-1 text-[#2563EB]">
@@ -575,44 +797,60 @@ const Profile = () => {
                   </div>
                 )}
               </div>
+              {isEditingPrefs && <FieldError error={tagErrors.location} />}
             </div>
 
-            {/* Salary */}
-            <div className="space-y-2" data-validation-error={!!errors.salary || undefined}>
-              <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Expected Salary</label>
-              {isEditing ? (
-                <select 
-                  name="salary"
-                  value={profile.salary}
-                  onChange={handleInputChange}
-                  onBlur={() => handleBlur("salary")}
-                  className="w-full bg-white rounded-lg px-4 py-2.5 text-sm font-medium outline-none"
-                  style={{ border: borderFor("salary") || "1px solid #2563EB" }}
-                >
-                  {["3-5 LPA", "5-8 LPA", "8-12 LPA", "12+ LPA"].map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+            {/* Expected Salary Range */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[#64748B] dark:text-gray-400 uppercase tracking-wider">Expected Salary (LPA)</label>
+              
+              {isEditingPrefs ? (
+                <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 rounded-lg p-2.5 border border-[#2563EB] shadow-sm flex-wrap gap-y-2 max-w-[200px]">
+                  <div className="flex items-center space-x-1">
+                    <input 
+                      type="text" 
+                      value={salMin} 
+                      onChange={(e) => { setSalMin(e.target.value.replace(/\D/g, '').slice(0, 2)); setSalErr(""); }}
+                      placeholder="Min"
+                      className="w-12 text-center text-sm font-bold bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700 rounded py-1 outline-none focus:border-[#2563EB] text-[#0F172A] dark:text-gray-100 transition-colors"
+                    />
+                    <span className="text-xs font-bold text-[#64748B] dark:text-gray-400 px-1">-</span>
+                    <input 
+                      type="text" 
+                      value={salMax} 
+                      onChange={(e) => { setSalMax(e.target.value.replace(/\D/g, '').slice(0, 2)); setSalErr(""); }}
+                      placeholder="Max"
+                      className="w-12 text-center text-sm font-bold bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700 rounded py-1 outline-none focus:border-[#2563EB] text-[#0F172A] dark:text-gray-100 transition-colors"
+                    />
+                    <span className="text-xs font-bold text-[#0F172A] dark:text-gray-100 ml-1">LPA</span>
+                  </div>
+                </div>
               ) : (
-                <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-4 py-2.5 text-sm font-semibold text-[#0F172A]">{profile.salary}</div>
+                <div className="w-full max-w-[200px] bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-semibold text-[#0F172A] dark:text-gray-100 flex justify-between items-center cursor-default">
+                  <span>{profile.expectedSalaryMinLpa || 1} – {profile.expectedSalaryMaxLpa || 2} LPA</span>
+                </div>
               )}
-              <FieldError error={errors.salary} />
+              {isEditingPrefs && <FieldError error={salErr} />}
             </div>
 
             {/* Availability */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Availability</label>
-              {isEditing ? (
+              <label className="text-xs font-bold text-[#64748B] dark:text-gray-400 uppercase tracking-wider">Availability</label>
+              {isEditingPrefs ? (
                 <select 
-                  name="availability"
                   value={profile.availability}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border border-[#2563EB] rounded-lg px-4 py-2.5 text-sm font-medium outline-none"
+                  onChange={(e) => setProfile(p => ({ ...p, availability: e.target.value }))}
+                  className="w-full bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:border-[#2563EB] shadow-sm transition-colors text-[#0F172A] dark:text-gray-100"
                 >
-                  {["Immediately Available", "Within 15 days", "Within 1 month"].map(a => <option key={a} value={a}>{a}</option>)}
+                  {["Immediately Available", "15 Days", "30 Days", "45 Days", "60 Days", "90 Days"].map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
               ) : (
-                <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-4 py-2.5 text-sm font-semibold text-[#0F172A]">{profile.availability}</div>
+                <div className="w-full bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-semibold text-[#0F172A] dark:text-gray-100 flex items-center cursor-default">
+                  <span>{profile.availability || "Not Set"}</span>
+                </div>
               )}
             </div>
+
           </div>
         </div>
 
@@ -636,12 +874,12 @@ const InputGroup = ({ label, name, value, icon, isEditing, onChange, onBlur, err
           value={value} 
           onChange={onChange}
           onBlur={onBlur}
-          className="w-full bg-white rounded-lg py-3 pl-10 pr-4 text-sm font-medium outline-none shadow-sm transition-all"
+          className="w-full bg-white dark:bg-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm font-medium outline-none shadow-sm transition-all"
           style={{ border: borderOverride || "1px solid #2563EB" }}
         />
       ) : (
-        <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-3 pl-10 pr-4 text-sm font-semibold text-[#0F172A]">
-          {value}
+        <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-2 pl-10 pr-4 text-sm font-semibold text-[#0F172A]">
+          {value || "-"}
         </div>
       )}
     </div>
@@ -649,39 +887,93 @@ const InputGroup = ({ label, name, value, icon, isEditing, onChange, onBlur, err
   </div>
 );
 
-const SocialLinkInput = ({ icon, label, name, value, placeholder, isEditing, onChange, onBlur, error, borderOverride }) => (
-  <div className="space-y-1">
-    <div className="relative group">
-      <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${isEditing ? "opacity-100" : "opacity-60"}`}>
-        {icon}
-      </div>
-      {isEditing ? (
-        <input 
-          type="text"
-          name={name}
-          value={value}
-          onChange={onChange}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          className="w-full rounded-xl py-3 pl-12 pr-28 text-sm outline-none transition-all"
-          style={{ border: borderOverride || "1px solid #E2E8F0" }}
-        />
-      ) : (
-        <div className="w-full bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl py-3 pl-12 pr-28 text-sm font-semibold text-[#1E40AF]">
-          {value}
+const SocialLinkInput = ({ icon, label, name, value, placeholder, onInlineSave }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localVal, setLocalVal] = useState(value || "");
+  const [error, setError] = useState("");
+
+  const handleSave = async () => {
+    const err = await onInlineSave(localVal);
+    if (err) {
+      setError(err);
+    } else {
+      setError("");
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setLocalVal(value || "");
+    setError("");
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="space-y-1">
+      <div className="relative group">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-100 z-10 transition-colors">
+          {icon}
         </div>
-      )}
-      <button 
-        onClick={() => window.open(`https://${value}`, "_blank")}
-        className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-1 py-1 px-3 rounded-lg text-[10px] font-bold text-[#2563EB] hover:bg-[#EFF6FF] transition-colors border border-transparent hover:border-[#BFDBFE]"
-      >
-        <span>Open</span>
-        <ExternalLink size={10} />
-      </button>
+        
+        {isEditing ? (
+          <div className="flex items-center space-x-2 w-full">
+            <input 
+              type="text"
+              name={name}
+              value={localVal}
+              onChange={(e) => { setLocalVal(e.target.value); setError(""); }}
+              placeholder={placeholder}
+              autoFocus
+              className="flex-1 bg-white dark:bg-slate-800 rounded-lg py-2 pl-12 pr-4 text-sm font-medium outline-none shadow-sm transition-all"
+              style={{ border: error ? "1px solid #EF4444" : "1px solid #2563EB" }}
+            />
+            <button 
+              onClick={handleSave} 
+              className="bg-[#10B981] text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#059669] shadow-sm transition-colors"
+            >
+              Save
+            </button>
+            <button 
+              onClick={handleCancel} 
+              className="bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#F1F5F9] transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="w-full bg-[#F8FAFC] flex items-center border border-[#E2E8F0] rounded-lg py-2 pl-12 pr-32 text-sm font-semibold text-[#1E40AF]">
+              {value && value.length > 0 ? (
+                <span className="truncate">{value}</span>
+              ) : (
+                <span className="text-[#94A3B8] font-medium">No {label.toLowerCase()} configured</span>
+              )}
+            </div>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center bg-[#F8FAFC] px-1 space-x-1">
+              {value && value.length > 0 && (
+                <button 
+                  onClick={() => window.open(value.startsWith('http') ? value : `https://${value}`, "_blank")}
+                  className="flex items-center space-x-1 py-1.5 px-3 rounded-lg text-[10px] font-bold text-[#2563EB] hover:bg-[#EFF6FF] transition-colors border border-transparent"
+                >
+                  <span>Open</span>
+                  <ExternalLink size={12} />
+                </button>
+              )}
+              <button 
+                onClick={() => { setIsEditing(true); setLocalVal(value || ""); }}
+                className="flex items-center space-x-1.5 py-1.5 px-3 rounded-lg text-[11px] font-bold bg-[#EFF6FF] text-[#1E40AF] hover:bg-[#DBEAFE] transition-colors border border-[#BFDBFE] shadow-sm"
+              >
+                <Edit3 size={12} />
+                <span>Change</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+      <FieldError error={error} />
     </div>
-    <FieldError error={error} />
-  </div>
-);
+  );
+};
 
 const Tag = ({ label, isEditing, onRemove }) => (
   <div className="bg-[#EFF6FF] text-[#2563EB] px-3 py-1 rounded-lg text-xs font-bold flex items-center space-x-1.5 border border-[#BFDBFE] animate-scale-in">

@@ -142,9 +142,70 @@ const deleteEmailLog = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get weekly email stats (Mon-Sun of current week)
+ * @route   GET /api/emails/weekly-stats
+ * @access  Private
+ */
+const getWeeklyStats = async (req, res) => {
+  try {
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const now = new Date();
+    // Manually shift to IST so UTCMonth/Date logic aligns with local calendar bounds
+    const nowIST = new Date(now.getTime() + IST_OFFSET_MS);
+
+    // Day offset computation (0=Sun -> 6=Sat) shift to (0=Mon -> 6=Sun)
+    let currentDayIdx = nowIST.getUTCDay();
+    let diffToMonday = currentDayIdx === 0 ? 6 : currentDayIdx - 1;
+
+    const mondayIST = new Date(nowIST);
+    mondayIST.setUTCDate(nowIST.getUTCDate() - diffToMonday);
+    mondayIST.setUTCHours(0, 0, 0, 0);
+
+    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const results = [];
+
+    // Evaluate all 7 days consecutively
+    for (let i = 0; i < 7; i++) {
+      const startOfDayIST = new Date(mondayIST);
+      startOfDayIST.setUTCDate(mondayIST.getUTCDate() + i);
+      
+      const endOfDayIST = new Date(startOfDayIST);
+      endOfDayIST.setUTCHours(23, 59, 59, 999);
+
+      // Re-normalize to UTC to safely query MongoDB timestamps
+      const startUTC = new Date(startOfDayIST.getTime() - IST_OFFSET_MS);
+      const endUTC = new Date(endOfDayIST.getTime() - IST_OFFSET_MS);
+
+      const count = await EmailLog.countDocuments({
+        status: 'Sent',
+        sentAt: { $gte: startUTC, $lte: endUTC },
+      });
+
+      const isToday = nowIST.getUTCDate() === startOfDayIST.getUTCDate() && 
+                      nowIST.getUTCMonth() === startOfDayIST.getUTCMonth() && 
+                      nowIST.getUTCFullYear() === startOfDayIST.getUTCFullYear();
+
+      const isFuture = startOfDayIST.getTime() > nowIST.getTime() && !isToday;
+
+      results.push({
+        day: labels[i],
+        date: startOfDayIST.toISOString().split('T')[0],
+        val: isFuture ? -1 : count,
+        isToday
+      });
+    }
+
+    res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to generate weekly stats', error: error.message });
+  }
+};
+
 module.exports = {
   createEmailLog,
   getEmailsByCompany,
   updateEmailStatus,
   deleteEmailLog,
+  getWeeklyStats
 };

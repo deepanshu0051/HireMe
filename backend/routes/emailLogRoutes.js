@@ -4,7 +4,8 @@ const {
   createEmailLog,
   getEmailsByCompany,
   updateEmailStatus,
-  deleteEmailLog
+  deleteEmailLog,
+  getWeeklyStats
 } = require('../controllers/emailLogController');
 
 /**
@@ -12,6 +13,12 @@ const {
  * @route   POST /
  */
 router.post('/', createEmailLog);
+
+/**
+ * @desc    Get weekly email sending statistics mapped per day natively mapped to IST bounds.
+ * @route   GET /weekly-stats
+ */
+router.get('/weekly-stats', getWeeklyStats);
 
 /**
  * @desc    Get all email logs for a specific company

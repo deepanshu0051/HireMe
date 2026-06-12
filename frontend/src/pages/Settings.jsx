@@ -5,6 +5,11 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { useTheme } from "../context/ThemeContext";
+import { isGuest, getToken } from "../utils/auth";
+import { guestData } from "../utils/guestData";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 
 // ─── Reusable Toggle Switch ────────────────────────────────────
 const Toggle = ({ checked, onChange, color = "#2563EB" }) => (
@@ -19,7 +24,7 @@ const Toggle = ({ checked, onChange, color = "#2563EB" }) => (
     }}
   >
     <span
-      className="inline-block bg-white rounded-full shadow-md transition-all duration-300"
+      className="inline-block bg-white dark:bg-slate-800 rounded-full shadow-md transition-all duration-300"
       style={{
         width: 22,
         height: 22,
@@ -55,7 +60,7 @@ export const Toast = ({ message, type = "success", onClose }) => {
 // ─── Section Card Wrapper ──────────────────────────────────────
 const SectionCard = ({ title, icon, children }) => (
   <div
-    className="rounded-[14px] p-6 space-y-6"
+    className="rounded-lg p-4 md:p-6 space-y-4" /* size-fix rounded-lg p-4 md:p-6 space-y-4 */
     style={{
       backgroundColor: "var(--card-bg)",
       border: "1px solid var(--border-color)",
@@ -63,11 +68,11 @@ const SectionCard = ({ title, icon, children }) => (
     }}
   >
     <div
-      className="flex items-center space-x-3 pb-4"
+      className="flex items-center space-x-2 pb-3" /* size-fix space-x-2 pb-3 */
       style={{ borderBottom: "1px solid var(--border-color)" }}
     >
       <span className="text-[#2563EB]">{icon}</span>
-      <h2 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{title}</h2>
+      <h2 className="text-base md:text-lg font-bold" style={{ color: "var(--text-primary)" }}>{title}</h2> {/* size-fix text-base md:text-lg */}
     </div>
     {children}
   </div>
@@ -77,7 +82,7 @@ const SectionCard = ({ title, icon, children }) => (
 const ToggleRow = ({ label, subtext, checked, onChange, color, divider = true }) => (
   <>
     <div
-      className="flex items-center justify-between py-3 px-1 rounded-lg transition-colors hover:cursor-default"
+      className="flex items-center justify-between py-2 px-1 rounded-lg transition-colors hover:cursor-default" /* size-fix py-2 */
       style={{ '&:hover': { backgroundColor: 'var(--bg-secondary)' } }}
     >
       <div>
@@ -94,25 +99,65 @@ const ToggleRow = ({ label, subtext, checked, onChange, color, divider = true })
 const Settings = () => {
   const { isDark, toggleTheme } = useTheme();
 
-  // Auto-Send
-  const [autoSend, setAutoSend] = useState(true);
-  const [emailsPerDay, setEmailsPerDay] = useState(5);
-  const [sendTime, setSendTime] = useState("09:00");
-  const [selectedDays, setSelectedDays] = useState(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+  // Local storage helpers
+  const loadLocal = (key, defaultVal) => {
+    const val = localStorage.getItem(`hireme_settings_${key}`);
+    return val ? JSON.parse(val) : defaultVal;
+  };
+  const saveLocal = (key, val) => {
+    if (!isGuest()) {
+      localStorage.setItem(`hireme_settings_${key}`, JSON.stringify(val));
+    }
+    return val;
+  };
+
+  // Auto-Send Backend State
+  const [autoSend, setAutoSendState] = useState(false);
+  const [isAutoSendLoading, setIsAutoSendLoading] = useState(false);
+
+  // Auto-Send Local UI States
+  const [emailsPerDay, setEmailsPerDay] = useState(() => loadLocal("emailsPerDay", 5));
+  const [sendTime, setSendTime] = useState(() => loadLocal("sendTime", "09:00"));
+  const [selectedDays, setSelectedDays] = useState(() => loadLocal("selectedDays", ["Mon", "Tue", "Wed", "Thu", "Fri"]));
 
   // Signature
   const [signature, setSignature] = useState(
-    `Best regards,\nDeepanshu\nFull Stack Developer\n📞 +91 9560287251\n🔗 linkedin.com/in/deepanshu-bhati\n💻 github.com/deepanshu0051`
+    isGuest() ? guestData.emailSignature : `Best regards,\nDeepanshu\nFull Stack Developer\n📞 +91 9560287251\n🔗 linkedin.com/in/deepanshu-bhati\n💻 github.com/deepanshu0051`
   );
   const [sigError, setSigError] = useState("");
 
-  // Notifications
-  const [notifs, setNotifs] = useState({
+  // Notifications Local State
+  const [notifs, setNotifs] = useState(() => loadLocal("notifs", {
     emailSent: true,
     dailySummary: true,
     replyAlert: true,
     weeklyReport: false,
-  });
+  }));
+
+  // Sync to local storage
+  React.useEffect(() => { saveLocal("emailsPerDay", emailsPerDay); }, [emailsPerDay]);
+  React.useEffect(() => { saveLocal("sendTime", sendTime); }, [sendTime]);
+  React.useEffect(() => { saveLocal("selectedDays", selectedDays); }, [selectedDays]);
+  React.useEffect(() => { saveLocal("notifs", notifs); }, [notifs]);
+
+  // Load Auto-Send exactly from Server on Mount
+  React.useEffect(() => {
+    if (isGuest()) return; // Guests can't fetch real settings
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/settings`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          setAutoSendState(json.data.autoSendEnabled || false);
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Toast
   const [toast, setToast] = useState(null);
@@ -121,6 +166,34 @@ const Settings = () => {
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleAutoSendToggle = async (checked) => {
+    if (isGuest()) {
+      showToast("Auto-Send configuration is available to Admins only.", "error");
+      return;
+    }
+    setIsAutoSendLoading(true);
+    // Optimistic UI update
+    setAutoSendState(checked);
+    try {
+      const res = await fetch(`${BASE_URL}/api/settings/auto-send`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ enabled: checked }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "Failed");
+      showToast(checked ? "Auto-Send Enabled" : "Auto-Send Disabled", "success");
+    } catch (err) {
+      showToast("Failed to update auto-send setting.", "error");
+      setAutoSendState(!checked); // Rollback
+    } finally {
+      setIsAutoSendLoading(false);
+    }
   };
 
   const toggleDay = (day) => {
@@ -133,13 +206,13 @@ const Settings = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[800px] mx-auto py-8 space-y-8 animate-fade-in">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Settings</h1>
+      <div className="max-w-[800px] mx-auto py-4 space-y-6 animate-fade-in"> {/* size-fix py-4 space-y-6 */}
+        <h1 className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}>Settings</h1> {/* size-fix text-lg md:text-xl */}
 
         {/* ─── SECTION 1: APPEARANCE ─── */}
-        <SectionCard title="Appearance" icon={<span style={{ fontSize: 20 }}>🎨</span>}>
+        <SectionCard title="Appearance" icon={<span style={{ fontSize: 18 }}>🎨</span>}> {/* size-fix 20->18 */}
           <div
-            className="flex items-center justify-between p-5 rounded-xl"
+            className="flex flex-col sm:flex-row items-center justify-between p-3 md:p-4 rounded-lg gap-3 sm:gap-0" /* size-fix p-3 md:p-4 rounded-lg gap-3 */
             style={{ backgroundColor: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}
           >
             {/* Light side */}
@@ -154,7 +227,7 @@ const Settings = () => {
             {/* Toggle */}
             <button
               onClick={toggleTheme}
-              className="relative inline-flex items-center rounded-full transition-all duration-300 focus:outline-none mx-4"
+              className="relative inline-flex items-center rounded-full transition-all duration-300 focus:outline-none my-2 sm:my-0 mx-4"
               style={{
                 width: 56,
                 height: 30,
@@ -162,7 +235,7 @@ const Settings = () => {
               }}
             >
               <span
-                className="inline-block bg-white rounded-full shadow-md transition-all duration-300"
+                className="inline-block bg-white dark:bg-slate-800 rounded-full shadow-md transition-all duration-300"
                 style={{
                   width: 24,
                   height: 24,
@@ -198,30 +271,38 @@ const Settings = () => {
         </SectionCard>
 
         {/* ─── SECTION 2: AUTO-SEND ─── */}
-        <SectionCard title="Auto-Send Configuration" icon={<Send size={20} />}>
-          <ToggleRow
-            label="Enable Auto-Send"
-            subtext="Automatically send emails daily"
-            checked={autoSend}
-            onChange={setAutoSend}
-            color="#10B981"
-          />
+        <SectionCard title="Auto-Send Configuration" icon={<Send size={18} />}> {/* size-fix size 18 */}
+          {isGuest() && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-2.5 rounded text-xs text-amber-800 mb-3"> {/* size-fix p-2.5 text-xs mb-3 */}
+              <strong>Guest View:</strong> Live email automation settings are locked. Log in as an Admin to configure the CRON engine.
+            </div>
+          )}
+          <div className={isGuest() ? "opacity-60 pointer-events-none" : ""}>
+            <ToggleRow
+              label="Enable Auto-Send"
+              subtext="Automatically send emails daily"
+              checked={autoSend}
+              onChange={handleAutoSendToggle}
+              color="#10B981"
+            />
+          </div>
+
 
           {/* Emails Per Day stepper */}
-          <div className="flex items-center justify-between py-3 px-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-2 px-1 gap-3 sm:gap-0"> {/* size-fix py-2 gap-3 */}
             <div>
               <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Emails Per Day</p>
               <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>How many companies to email daily</p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2"> {/* size-fix space-x-2 */}
               <button
                 onClick={() => {
                   if (emailsPerDay <= 1) showToast("Minimum limit is 1 email per day", "info");
                   else setEmailsPerDay(p => p - 1);
                 }}
-                className="w-9 h-9 rounded-lg bg-[#2563EB] text-white font-bold text-lg flex items-center justify-center shadow hover:bg-[#1d4ed8] transition-colors"
+                className="w-7 h-7 rounded-md bg-[#2563EB] text-white font-bold text-base flex items-center justify-center shadow hover:bg-[#1d4ed8] transition-colors" /* size-fix w-7 h-7 rounded-md text-base */
               >−</button>
-              <span className="text-2xl font-bold w-10 text-center" style={{ color: "var(--text-primary)" }}>
+              <span className="text-xl font-bold w-10 text-center" style={{ color: "var(--text-primary)" }}> {/* size-fix text-xl */}
                 {emailsPerDay}
               </span>
               <button
@@ -229,14 +310,14 @@ const Settings = () => {
                   if (emailsPerDay >= 20) showToast("Maximum limit is 20 emails per day", "info");
                   else setEmailsPerDay(p => p + 1);
                 }}
-                className="w-9 h-9 rounded-lg bg-[#2563EB] text-white font-bold text-lg flex items-center justify-center shadow hover:bg-[#1d4ed8] transition-colors"
+                className="w-7 h-7 rounded-md bg-[#2563EB] text-white font-bold text-base flex items-center justify-center shadow hover:bg-[#1d4ed8] transition-colors" /* size-fix w-7 h-7 rounded-md text-base */
               >+</button>
             </div>
           </div>
           <div style={{ borderBottom: "1px solid var(--border-color)" }} />
 
           {/* Send Time */}
-          <div className="flex items-center justify-between py-3 px-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-2 px-1 gap-3 sm:gap-0"> {/* size-fix py-2 gap-3 */}
             <div>
               <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Daily Send Time</p>
               <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>What time to send emails every day</p>
@@ -312,8 +393,8 @@ const Settings = () => {
                   const hasError = !val || val.length < 10 || val.length > 500;
                   e.target.style.borderColor = hasError ? "#EF4444" : (val.length >= 10 ? "#10B981" : "var(--border-color)");
                 }}
-                rows={7}
-                className="w-full rounded-xl px-4 py-3 text-sm font-medium outline-none resize-none transition-all"
+                rows={5} /* size-fix 7->5 */
+                className="w-full rounded-lg px-3 py-2 text-sm font-medium outline-none resize-none transition-all" /* size-fix rounded-lg px-3 py-2 */
                 style={{
                   backgroundColor: "var(--input-bg)",
                   border: sigError ? "1px solid #EF4444" : "1px solid var(--border-color)",
@@ -362,7 +443,7 @@ const Settings = () => {
                   showToast("Signature saved ✓", "success");
                 }
               }}
-              className="w-full bg-[#2563EB] text-white py-3 rounded-xl font-bold text-sm shadow-md hover:bg-[#1d4ed8] transition-colors"
+              className="w-full bg-[#2563EB] text-white py-2 rounded-lg font-bold text-sm shadow-md hover:bg-[#1d4ed8] transition-colors" /* size-fix py-2 rounded-lg */
             >
               Save Signature
             </button>
@@ -404,7 +485,9 @@ const Settings = () => {
           <div className="flex items-center justify-between py-2 px-1">
             <div>
               <p className="text-xs font-bold uppercase" style={{ color: "var(--text-secondary)" }}>Email Address</p>
-              <p className="text-sm font-semibold mt-0.5" style={{ color: "var(--text-primary)" }}>deepubhati0051@gmail.com</p>
+              <p className="text-sm font-semibold mt-0.5" style={{ color: "var(--text-primary)" }}>
+                {isGuest() ? guestData.email : "deepubhati0051@gmail.com"}
+              </p>
             </div>
             <button className="text-xs font-bold text-[#2563EB] hover:underline">Change</button>
           </div>
@@ -417,8 +500,11 @@ const Settings = () => {
               <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>Download all your HireMe data</p>
             </div>
             <button
-              onClick={() => showToast("Data export will be ready shortly", "info")}
-              className="flex items-center space-x-2 border px-4 py-2 rounded-lg text-xs font-bold transition-all"
+              onClick={() => {
+                if (isGuest()) showToast("Guest mode — saving disabled. Admin access only.", "error");
+                else showToast("Data export will be ready shortly", "info");
+              }}
+              className="flex items-center space-x-2 border px-3 py-1.5 rounded-lg text-xs font-bold transition-all" /* size-fix px-3 py-1.5 */
               style={{
                 borderColor: "#2563EB",
                 color: "#2563EB",
@@ -441,9 +527,9 @@ const Settings = () => {
             </div>
             <button
               onClick={() => setShowClearModal(true)}
-              className="flex items-center space-x-2 border border-red-300 text-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-50 transition-all"
+              className="flex items-center space-x-2 border border-red-300 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-50 transition-all" /* size-fix px-3 py-1.5 */
             >
-              <Trash2 size={14} />
+              <Trash2 size={12} /> {/* size-fix size 12 */}
               <span>Clear Data</span>
             </button>
           </div>
@@ -479,37 +565,42 @@ const Settings = () => {
 
       {/* ─── CLEAR DATA MODAL ─── */}
       {showClearModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/50 backdrop-blur-sm animate-fade-in"> {/* size-fix p-3 */}
           <div
-            className="rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-scale-in"
+            className="rounded-xl p-4 md:p-5 max-w-sm w-full shadow-2xl animate-scale-in" /* size-fix rounded-xl p-4 md:p-5 */
             style={{ backgroundColor: "var(--card-bg)", border: "1px solid var(--border-color)" }}
           >
-            <div className="flex justify-between items-start mb-4">
-              <div className="bg-red-50 p-3 rounded-full">
-                <Trash2 size={24} className="text-red-600" />
+            <div className="flex justify-between items-start mb-3"> {/* size-fix mb-3 */}
+              <div className="bg-red-50 p-2 rounded-full"> {/* size-fix p-2 */}
+                <Trash2 size={20} className="text-red-600" /> {/* size-fix 24->20 */}
               </div>
               <button onClick={() => setShowClearModal(false)} style={{ color: "var(--text-muted)" }}>
-                <X size={20} />
+                <X size={18} /> {/* size-fix 20->18 */}
               </button>
             </div>
-            <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Clear all data?</h3>
-            <p className="text-sm mt-2 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            <h3 className="text-base md:text-lg font-bold" style={{ color: "var(--text-primary)" }}>Clear all data?</h3> {/* size-fix text-base */}
+            <p className="text-xs md:text-sm mt-1.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}> {/* size-fix text-xs mt-1.5 */}
               This will delete all your mail history and application data. Are you sure? This action cannot be undone.
             </p>
-            <div className="flex items-center space-x-3 mt-6">
+            <div className="flex items-center space-x-2 mt-6"> {/* size-fix space-x-2 mt-6 */}
               <button
                 onClick={() => setShowClearModal(false)}
-                className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+                className="flex-1 py-2 rounded-lg text-sm font-bold transition-all" /* size-fix py-2 */
                 style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)" }}
               >
                 Cancel
               </button>
               <button
                 onClick={() => {
+                  if (isGuest()) {
+                    setShowClearModal(false);
+                    showToast("Guest mode — saving disabled. Admin access only.", "error");
+                    return;
+                  }
                   setShowClearModal(false);
                   showToast("All data cleared.", "error");
                 }}
-                className="flex-1 bg-red-600 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-red-700 transition-all shadow-md"
+                className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition-all shadow-md" /* size-fix py-2 */
               >
                 Confirm Delete
               </button>

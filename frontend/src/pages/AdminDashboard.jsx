@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowRight, Send, MessageSquare, Calendar,
   Code, Layers, Globe, Server, Monitor,
   Clock, Lightbulb, Zap
 } from "lucide-react";
 import { DashboardLayout } from "../layouts/DashboardLayout";
+import { isGuest, getToken, getRole } from "../utils/auth";
+import { Play, Square, AlertTriangle } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────
 const today = new Date();
@@ -12,8 +14,7 @@ const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","S
 const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const todayLabel = `${dayNames[today.getDay()]}, ${today.getDate()} ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
 
-// Week chart data (Mon–Sun)
-const weekData = [
+const guestWeekData = [
   { day: "Mon", val: 5 },
   { day: "Tue", val: 5 },
   { day: "Wed", val: 3 },
@@ -22,19 +23,21 @@ const weekData = [
   { day: "Sat", val: 2 },
   { day: "Sun", val: 0 },
 ];
-const maxVal = Math.max(...weekData.map(d => d.val));
 
-// Role cards config
-const roleCards = [
+// Colors and generic fallback icons for dynamically generated Role Cards
+const ROLE_COLORS = ["#6366F1", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6"];
+const ROLE_ICONS = [Layers, Code, Globe, Server, Monitor, Clock, Lightbulb, Zap];
+
+// ─── Guest Mocks ──────────────────────────────────────────────────────────
+const guestStats = { totalCompanies: 24, sentToday: 5, pendingCount: 2, failedCount: 1, repliedCount: 7 };
+const guestRoleCards = [
   { role: "MERN Stack",   count: 8,  color: "#6366F1", icon: Layers },
   { role: "React Dev",    count: 6,  color: "#0EA5E9", icon: Code },
   { role: "Full Stack",   count: 5,  color: "#10B981", icon: Globe },
   { role: "Node.js",      count: 3,  color: "#F59E0B", icon: Server },
   { role: "Frontend",     count: 2,  color: "#EF4444", icon: Monitor },
 ];
-
-// Activity feed
-const activityFeed = [
+const guestActivityFeed = [
   { dot: "#2563EB", text: "Email sent to Infosys — React Developer",    time: "2 hours ago" },
   { dot: "#10B981", text: "Reply received from Cognizant",               time: "5 hours ago" },
   { dot: "#F59E0B", text: "Email sent to TCS — Frontend Engineer",       time: "9:05 AM" },
@@ -53,7 +56,7 @@ const tips = [
 // ─── Card wrapper ────────────────────────────────────────────────
 const Card = ({ children, className = "", style = {} }) => (
   <div
-    className={`rounded-[14px] p-5 ${className}`}
+    className={`rounded-lg p-3 md:p-4 ${className}`} /* size-fix */
     style={{
       backgroundColor: "var(--card-bg)",
       border: "1px solid var(--border-color)",
@@ -73,41 +76,323 @@ const SectionTitle = ({ icon: Icon, title }) => (
 );
 
 // ─── Main Component ──────────────────────────────────────────────
-const AdminDashboard = () => (
-  <DashboardLayout>
+const AdminDashboard = () => {
+  const [stats, setStats] = useState(isGuest() ? guestStats : {
+    totalCompanies: 0,
+    sentToday: 0,
+    pendingCount: 0,
+    failedCount: 0,
+    repliedCount: 0
+  });
+
+  const [roleCardsState, setRoleCardsState] = useState(isGuest() ? guestRoleCards : []);
+  const [feedState, setFeedState] = useState(isGuest() ? guestActivityFeed : []);
+  const [weekStats, setWeekStats] = useState(isGuest() ? guestWeekData : []);
+  const [maxWeekVal, setMaxWeekVal] = useState(isGuest() ? 5 : 0);
+  const [loading, setLoading] = useState(!isGuest()); // Loading state for admins
+  const [error, setError] = useState(null);
+
+  const [currentTime, setCurrentTime] = useState("");
+
+  useEffect(() => {
+    if (isGuest()) {
+      setCurrentTime("(Demo) Thursday, 11 June 2026 | 14:32:05");
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const optionsDate = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' };
+      const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' };
+      
+      const datePart = new Intl.DateTimeFormat('en-GB', optionsDate).format(now);
+      const timePart = new Intl.DateTimeFormat('en-GB', optionsTime).format(now);
+      setCurrentTime(`${datePart} | ${timePart} IST`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // ─── Automation Toggle State ────────────────────────────────────
+  // Tracks whether the cron auto-send engine is active (from DB via GET /api/settings)
+  const [autoSendEnabled, setAutoSendEnabled] = useState(false);
+  const [automationLoading, setAutomationLoading] = useState(false);
+  const [automationToast, setAutomationToast] = useState(null);
+
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
+  const showAutomationToast = (message, type = "info") => {
+    setAutomationToast({ message, type });
+    setTimeout(() => setAutomationToast(null), 4000);
+  };
+
+  useEffect(() => {
+    if (isGuest()) return;
+
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+        const token = localStorage.getItem("hireme_token");
+        
+        const [resComp, resWeek] = await Promise.all([
+          fetch(`${baseUrl}/api/companies`, { headers: { "Authorization": `Bearer ${token}` } }),
+          fetch(`${baseUrl}/api/emails/weekly-stats`, { headers: { "Authorization": `Bearer ${token}` } })
+        ]);
+
+        if (!resComp.ok || !resWeek.ok) throw new Error("Failed to fetch dashboard metrics");
+        
+        const dataComp = await resComp.json();
+        const dataWeek = await resWeek.json();
+        
+        const companies = dataComp.data || [];
+        const todayStr = new Date().toDateString();
+        
+        // Sync Weekly Data Component Mapping
+        const weekRows = dataWeek.data || [];
+        const mMax = Math.max(...weekRows.map(d => d.val >= 0 ? d.val : 0));
+        setWeekStats(weekRows);
+        setMaxWeekVal(mMax > 0 ? mMax : 1); // fallback 1 to avoid / 0 errors natively
+
+        let sentToday = 0;
+        let pendingCount = 0;
+        let failedCount = 0;
+        let repliedCount = 0;
+
+        // Dynamic Time Formatter
+        const getTimeLabel = (dateStr) => {
+          if (!dateStr) return "";
+          const diff = Math.floor((new Date() - new Date(dateStr)) / 1000);
+          if (diff < 60) return "Just now";
+          if (diff < 3600) return `${Math.floor(diff / 60)} mins ago`;
+          if (diff < 86400) {
+            const h = Math.floor(diff / 3600);
+            return h === 1 ? "1 hour ago" : `${h} hours ago`;
+          }
+          if (diff < 172800) return "Yesterday";
+          return `${Math.floor(diff / 86400)} days ago`;
+        };
+
+        const jobCounts = {};
+        const events = [];
+
+        companies.forEach(company => {
+          // Stats aggregation
+          if (company.status === "Pending") pendingCount++;
+          if (company.status === "Failed") failedCount++;
+          if (company.replied === true) repliedCount++;
+          
+          if (company.sentAt) {
+            if (new Date(company.sentAt).toDateString() === todayStr) {
+              sentToday++;
+            }
+          }
+
+          // Role aggregation
+          const role = company.jobRole || "General";
+          jobCounts[role] = (jobCounts[role] || 0) + 1;
+
+          // Event feeds
+          if (company.replied) {
+            events.push({ timeVal: new Date(company.updatedAt || company.sentAt), dot: "#10B981", text: `Reply received from ${company.companyName}` });
+          } else if (company.status === "Sent") {
+            events.push({ timeVal: new Date(company.sentAt), dot: "#2563EB", text: `Email sent to ${company.companyName} — ${company.jobRole}` });
+          } else if (company.status === "Failed") {
+            events.push({ timeVal: new Date(company.updatedAt), dot: "#EF4444", text: `Failed to email ${company.companyName}` });
+          }
+        });
+
+        // Map Roles
+        const parsedRoles = Object.entries(jobCounts)
+          .sort((a, b) => b[1] - a[1]) // Descending
+          .slice(0, 8)                 // Max 8
+          .map(([roleStr, count], idx) => ({
+            role: roleStr,
+            count: count,
+            color: ROLE_COLORS[idx % ROLE_COLORS.length],
+            icon: ROLE_ICONS[idx % ROLE_ICONS.length]
+          }));
+        setRoleCardsState(parsedRoles);
+
+        // Sort Feed
+        const sortedEvents = events
+          .sort((a, b) => b.timeVal - a.timeVal)
+          .slice(0, 10)
+          .map(ev => ({
+            dot: ev.dot,
+            text: ev.text,
+            time: getTimeLabel(ev.timeVal)
+          }));
+        setFeedState(sortedEvents);
+
+        setStats({
+          totalCompanies: companies.length,
+          sentToday,
+          pendingCount,
+          failedCount,
+          repliedCount
+        });
+      } catch (err) {
+        console.error("Dashboard Stats Fetch Error:", err);
+        setError("Could not load real stats.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+
+    // ─── Fetch current automation state from DB ─────────────────────────────
+    const fetchAutomationState = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/settings`, {
+          headers: { "Authorization": `Bearer ${getToken()}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          setAutoSendEnabled(!!data.data.autoSendEnabled);
+        }
+      } catch (e) {
+        console.error("Failed to fetch automation state:", e);
+      }
+    };
+    fetchAutomationState();
+  }, []);
+
+  /**
+   * toggleAutomation — Handles Start/Stop button clicks.
+   *
+   * RESUME GUARD: Before enabling automation, we verify the user has
+   * uploaded a resume (localStorage 'hireme_resume_uploaded' = 'true').
+   * Without a resume, there is nothing to attach to job applications,
+   * so we block the start and show an instructional toast.
+   *
+   * Guest Guard: This function is never called for guest users (button is hidden).
+   */
+  const handleToggleAutomation = async () => {
+    const newState = !autoSendEnabled;
+
+    // RESUME GUARD: Only check when trying to ENABLE automation
+    if (newState === true) {
+      const resumeUploaded = localStorage.getItem("hireme_resume_uploaded");
+      if (resumeUploaded !== "true") {
+        showAutomationToast("Please upload your resume in the Resume tab first!", "warning");
+        return; // Block the API call entirely
+      }
+    }
+
+    setAutomationLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/settings/auto-send`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ enabled: newState })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAutoSendEnabled(newState);
+        showAutomationToast(
+          newState ? "Automation started! Emails will be sent at 9:00 AM IST daily." : "Automation stopped.",
+          newState ? "success" : "info"
+        );
+      } else {
+        showAutomationToast("Failed to update automation setting.", "error");
+      }
+    } catch (e) {
+      showAutomationToast("Network error. Please try again.", "error");
+    } finally {
+      setAutomationLoading(false);
+    }
+  };
+
+  return (
+    <DashboardLayout>
     {/* Page tint */}
     <div className="space-y-5 animate-fade-in" style={{ color: "var(--text-primary)" }}>
 
       {/* ── SECTION 1: GREETING BAR ── */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            Good morning, Deepanshu 👋
+          <h1 className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}> {/* size-fix */}
+            Good morning, {isGuest() ? "Demo User" : "Deepanshu"} 👋
           </h1>
           <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-            3 of 5 emails sent today &nbsp;·&nbsp; {todayLabel}
+            {stats.sentToday} emails sent today &nbsp;·&nbsp; {currentTime || "Loading time..."}
+            {loading && <span className="ml-2 text-xs text-blue-500 opacity-80">(loading stats...)</span>}
+            {error && <span className="ml-2 text-xs text-red-500 opacity-80">({error})</span>}
           </p>
           {/* Progress bar */}
           <div className="flex items-center space-x-3 mt-1">
-            <div className="w-[200px] h-[6px] rounded-full" style={{ backgroundColor: "#DBEAFE" }}>
+            <div className="w-[150px] h-2 rounded-full" style={{ backgroundColor: "#DBEAFE" }}> {/* size-fix */}
               <div
                 className="h-full rounded-full transition-all"
                 style={{ width: "60%", backgroundColor: "#2563EB" }}
               />
             </div>
-            <span className="text-xs font-bold" style={{ color: "#2563EB" }}>3 / 5</span>
+            <span className="text-xs font-bold" style={{ color: "#2563EB" }}>{Math.min(stats.sentToday, 5)} / 5</span>
           </div>
         </div>
 
-        <button className="bg-[#2563EB] text-white px-6 py-3 rounded-[10px] font-bold text-sm flex items-center space-x-2 shadow-md hover:bg-[#1d4ed8] transition-all active:scale-95 w-fit">
-          <span>Send today's emails</span>
-          <ArrowRight size={18} />
-        </button>
+        {/* ── AUTOMATION CONTROL BUTTON ──────────────────────────────────────────
+            Visible to Admin only. Guests see nothing here.
+            - If autoSendEnabled is true  → shows "Stop Automation" (red)
+            - If autoSendEnabled is false → shows "Start Today's Emails" (green)
+              with a resume guard that blocks start if no resume has been uploaded.
+        ─────────────────────────────────────────────────────────────────────── */}
+        {!isGuest() && (
+          <div className="flex flex-col items-end gap-2">
+            {/* Status badge */}
+            <div className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full border ${ /* size-fix */
+              autoSendEnabled
+                ? "bg-green-50 border-green-200 text-green-700"
+                : "bg-slate-100 border-slate-200 text-slate-500"
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${autoSendEnabled ? "bg-green-500 animate-pulse" : "bg-slate-400"}`} />
+              {autoSendEnabled ? "Automation: ACTIVE · 10AM–5PM IST" : "Automation: STOPPED"}
+            </div>
+
+            {/* Start / Stop button */}
+            <button
+              onClick={handleToggleAutomation}
+              disabled={automationLoading}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed ${ /* size-fix */
+                autoSendEnabled
+                  ? "bg-red-500 hover:bg-red-600 text-white shadow-red-200"
+                  : "bg-[#10B981] hover:bg-[#059669] text-white shadow-green-200"
+              }`}
+            >
+              {automationLoading ? (
+                <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              ) : autoSendEnabled ? (
+                <Square size={16} fill="white" />
+              ) : (
+                <Play size={16} fill="white" />
+              )}
+              <span>{autoSendEnabled ? "Stop Automation" : "Start Today's Emails"}</span>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* ── AUTOMATION TOAST ─── */}
+      {automationToast && (
+        <div className={`fixed bottom-8 right-8 z-[200] flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl border text-sm font-semibold transition-all animate-slide-in-right ${
+          automationToast.type === "success" ? "bg-green-50 border-green-200 text-green-800" :
+          automationToast.type === "error"   ? "bg-red-50 border-red-200 text-red-800" :
+          automationToast.type === "warning" ? "bg-amber-50 border-amber-200 text-amber-800" :
+          "bg-blue-50 border-blue-200 text-blue-800"
+        }`}>
+          {automationToast.type === "warning" && <AlertTriangle size={16} />}
+          {automationToast.message}
+        </div>
+      )}
 
       {/* ── SECTION 2: HERO TOTAL CARD ── */}
       <div
-        className="w-full rounded-[14px] px-8 py-7 flex flex-col items-center justify-center text-white relative overflow-hidden"
+        className="w-full rounded-lg px-4 py-5 flex flex-col items-center justify-center text-white relative overflow-hidden" /* size-fix */
         style={{ background: "linear-gradient(135deg, #1740A6 0%, #2563EB 100%)" }}
       >
         {/* Decorative blobs */}
@@ -116,42 +401,42 @@ const AdminDashboard = () => (
 
         {/* Main number */}
         <p
-          className="font-bold text-white z-10 select-none"
+          className="font-bold text-white z-10 select-none text-4xl" /* size-fix */
           style={{
-            fontSize: 52,
             lineHeight: 1.1,
             animation: "pulse-soft 2.5s ease-in-out infinite",
           }}
         >
-          24
+          {stats.totalCompanies}
         </p>
         <p className="text-sm font-semibold opacity-80 uppercase tracking-widest z-10 mb-5">
           Total Companies Messaged
         </p>
 
         {/* Mini stats row */}
-        <div className="flex items-center divide-x divide-white/30 z-10">
+        <div className="flex items-center flex-wrap justify-center gap-y-2 divide-x divide-white/30 z-10">
           {[
-            { icon: Send,           label: "5 sent today" },
-            { icon: MessageSquare,  label: "7 replies received" },
-            { icon: Calendar,       label: "2 interviews" },
+            { icon: Send,           label: `${stats.sentToday} sent today` },
+            { icon: MessageSquare,  label: `${stats.repliedCount} replied` },
+            { icon: Clock,          label: `${stats.pendingCount} pending` },
+            { icon: Zap,            label: `${stats.failedCount} failed` },
           ].map(({ icon: Icon, label }) => (
-            <div key={label} className="flex items-center space-x-2 px-6 first:pl-0 last:pr-0">
-              <Icon size={15} className="opacity-80" />
+            <div key={label} className="flex items-center space-x-1.5 px-3 md:px-4 first:pl-0 last:pr-0"> {/* size-fix */}
+              <Icon size={14} className="opacity-80" /> {/* size-fix */}
               <span className="text-xs font-semibold opacity-90">{label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── SECTION 3: ROLE CARDS (single row) ── */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
-        {roleCards.map(({ role, count, color, icon: Icon }) => (
+      {/* ── SECTION 3: ROLE CARDS (single flex/grid) ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3"> {/* size-fix */}
+        {roleCardsState.map(({ role, count, color, icon: Icon }) => (
           <div
             key={role}
-            className="rounded-[14px] p-4 flex flex-col justify-between cursor-default"
+            className="rounded-lg p-3 md:p-4 flex flex-col justify-between cursor-default" /* size-fix */
             style={{
-              height: 140,
+              height: 120, /* size-fix */
               backgroundColor: "var(--card-bg)",
               border: "1px solid var(--border-color)",
               borderTop: `4px solid ${color}`,
@@ -168,14 +453,14 @@ const AdminDashboard = () => (
             }}
           >
             <span
-              className="text-[10px] font-bold uppercase tracking-wider"
+              className="text-xs font-bold uppercase tracking-wider" /* size-fix */
               style={{ color: "var(--text-secondary)" }}
             >
               {role}
             </span>
             <div className="flex flex-col items-start space-y-1">
-              <Icon size={18} style={{ color }} />
-              <p className="font-bold" style={{ fontSize: 32, lineHeight: 1, color: "var(--text-primary)" }}>
+              <Icon size={16} style={{ color }} /> {/* size-fix */}
+              <p className="font-bold text-2xl" style={{ lineHeight: 1, color: "var(--text-primary)" }}> {/* size-fix */}
                 {count}
               </p>
             </div>
@@ -185,37 +470,58 @@ const AdminDashboard = () => (
 
       {/* ── SECTION 4: WEEKLY ACTIVITY CHART ── */}
       <Card>
-        <SectionTitle icon={Zap} title="Weekly Application Activity" />
-        <div className="flex items-end justify-around" style={{ height: 160, gap: 8 }}>
-          {weekData.map(({ day, val }) => {
-            const heightPct = maxVal > 0 ? (val / maxVal) * 100 : 0;
-            return (
-              <div key={day} className="flex flex-col items-center justify-end space-y-1 flex-1">
-                {/* Value label */}
-                <span
-                  className="text-xs font-bold"
-                  style={{ color: val > 0 ? "#2563EB" : "var(--text-secondary)" }}
-                >
-                  {val > 0 ? val : "–"}
-                </span>
-                {/* Bar */}
-                <div
-                  className="w-full rounded-t-lg transition-all"
-                  style={{
-                    height: val > 0 ? `${heightPct}%` : 4,
-                    backgroundColor: val > 0 ? "#2563EB" : "var(--border-color)",
-                    minHeight: val > 0 ? 16 : 4,
-                    maxHeight: "100%",
-                  }}
-                />
-                {/* Day label */}
-                <span className="text-[10px] font-bold" style={{ color: "var(--text-secondary)" }}>
-                  {day}
-                </span>
-              </div>
-            );
-          })}
+        <div className="flex justify-between items-center mb-4">
+          <SectionTitle icon={Zap} title="Weekly Application Activity" />
+          {isGuest() && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md shadow-sm border border-amber-200 uppercase tracking-widest">(Demo Data)</span>}
         </div>
+        
+        {loading ? (
+          <div className="flex items-end justify-around h-[160px] animate-pulse">
+            {[1,2,3,4,5,6,7].map(k => <div key={k} className="w-8 bg-slate-200/50 border border-slate-200 rounded-t-md h-full opacity-25" />)}
+          </div>
+        ) : (
+          <div className="flex items-end justify-around" style={{ height: 160, gap: 8 }}>
+            {weekStats.map(({ day, val, isToday }) => {
+              const heightPct = maxWeekVal > 0 && val > 0 ? (val / maxWeekVal) * 100 : 0;
+              const isFuture = val === -1;
+              const isFilled = val > 0;
+              
+              return (
+                <div key={day} className="flex flex-col items-center justify-end space-y-1 flex-1 relative">
+                  {/* Today Overlay Pill */}
+                  {isToday && (
+                    <div className="absolute -top-6 text-[9px] uppercase font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full shadow-sm animate-pulse-soft">
+                      Today
+                    </div>
+                  )}
+                  {/* Value label */}
+                  <span
+                    className="text-xs font-bold"
+                    style={{ color: isFilled ? "#2563EB" : isFuture ? "var(--border-color)" : "var(--text-secondary)" }}
+                  >
+                    {isFuture ? "–" : val}
+                  </span>
+                  {/* Bar */}
+                  <div
+                    className="w-full rounded-t-lg transition-all"
+                    style={{
+                      height: isFilled ? `${heightPct}%` : 4,
+                      backgroundColor: isFuture ? "transparent" : isFilled ? (isToday ? "#1D4ED8" : "#2563EB") : "var(--border-color)",
+                      border: isFuture ? "1px dashed var(--border-color)" : "none",
+                      minHeight: isFilled ? 16 : 4,
+                      maxHeight: "100%",
+                      opacity: isToday ? 1 : 0.8
+                    }}
+                  />
+                  {/* Day label */}
+                  <span className="text-[10px] font-bold" style={{ color: isToday ? "#1D4ED8" : "var(--text-secondary)" }}>
+                    {day}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       {/* ── SECTION 5: TWO COLUMN BOTTOM ── */}
@@ -224,36 +530,25 @@ const AdminDashboard = () => (
         {/* LEFT — Recent Activity Feed */}
         <Card>
           <SectionTitle icon={Clock} title="Recent Activity" />
-          <div className="space-y-4">
-            {activityFeed.map(({ dot, text, time }, i) => (
-              <div key={i} className="flex items-start space-x-3">
-                {/* Timeline dot + line */}
-                <div className="flex flex-col items-center pt-0.5">
-                  <div
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: dot }}
-                  />
-                  {i < activityFeed.length - 1 && (
-                    <div
-                      className="w-[1.5px] flex-1 mt-1"
-                      style={{ backgroundColor: "var(--border-color)", minHeight: 20 }}
-                    />
+          {feedState.length === 0 ? (
+            <p className="text-sm text-slate-500 py-2">No timeline events to display.</p>
+          ) : (
+            feedState.map((item, idx) => (
+              <div key={idx} className="relative flex items-start gap-4">
+                {/* Custom Dot */}
+                <div className="flex flex-col items-center mt-1">
+                  <div className="w-[10px] h-[10px] rounded-full z-10" style={{ backgroundColor: item.dot, boxShadow: `0 0 0 4px ${item.dot}20` }} />
+                  {idx !== feedState.length - 1 && (
+                    <div className="w-[2px] h-10 bg-slate-100 absolute top-3" />
                   )}
                 </div>
-                <div className="flex-1 flex justify-between items-start pb-3">
-                  <p
-                    className="text-xs font-semibold leading-snug max-w-[75%]"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {text}
-                  </p>
-                  <span className="text-[10px] font-medium ml-2 shrink-0" style={{ color: "var(--text-secondary)" }}>
-                    {time}
-                  </span>
+                <div className="flex-1 pb-4">
+                  <p className="text-sm font-semibold text-slate-700 leading-snug">{item.text}</p>
+                  <p className="text-[11px] font-medium text-slate-400 mt-0.5">{item.time}</p>
                 </div>
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </Card>
 
         {/* RIGHT — Quick Tips */}
@@ -263,7 +558,7 @@ const AdminDashboard = () => (
             {tips.map((tip, i) => (
               <div
                 key={i}
-                className="relative rounded-[10px] px-4 py-3.5"
+                className="relative rounded-lg px-3 py-2" /* size-fix */
                 style={{
                   backgroundColor: "var(--stat-bg)",
                   borderLeft: "3px solid #2563EB",
@@ -274,7 +569,7 @@ const AdminDashboard = () => (
               >
                 {/* Tip number badge */}
                 <span
-                  className="absolute top-2.5 right-3 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  className="absolute top-2.5 right-3 text-[10px] font-bold px-1.5 py-0.5 rounded-full" /* size-fix */
                   style={{ backgroundColor: "#DBEAFE", color: "#1E40AF" }}
                 >
                   #{i + 1}
@@ -297,6 +592,7 @@ const AdminDashboard = () => (
       }
     `}</style>
   </DashboardLayout>
-);
+  );
+};
 
 export default AdminDashboard;
