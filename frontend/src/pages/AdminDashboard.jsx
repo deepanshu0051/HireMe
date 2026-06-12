@@ -5,7 +5,7 @@ import {
   Clock, Lightbulb, Zap
 } from "lucide-react";
 import { DashboardLayout } from "../layouts/DashboardLayout";
-import { isGuest, getToken, getRole } from "../utils/auth";
+import { getRole, getToken, isGuest } from "../utils/auth";
 import { Play, Square, AlertTriangle } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ const AdminDashboard = () => {
       setLoading(true);
       try {
         const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-        const token = localStorage.getItem("hireme_token");
+        const token = getToken();
         
         const [resComp, resWeek] = await Promise.all([
           fetch(`${baseUrl}/api/companies`, { headers: { "Authorization": `Bearer ${token}` } }),

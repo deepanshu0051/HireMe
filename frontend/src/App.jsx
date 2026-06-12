@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { isAuthed } from "./utils/auth";
+import { isAuthed, getToken } from "./utils/auth";
 
 import AccessGate from "./pages/AccessGate";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -32,7 +32,7 @@ import AIJobs from "./pages/AIJobs";
  * Reads directly from localStorage to avoid stale closure issues safely preventing ghost environments.
  */
 const ProtectedRoute = ({ element }) => {
-  const token = localStorage.getItem("hireme_token");
+  const token = getToken();
   return token && token.length > 0 ? element : <Navigate to="/access" replace />;
 };
 
@@ -41,7 +41,7 @@ const ProtectedRoute = ({ element }) => {
  * If user already has a valid token, skip the gate and go straight to the dashboard.
  */
 const PublicRoute = ({ element }) => {
-  const token = localStorage.getItem("hireme_token");
+  const token = getToken();
   return token && token.length > 0 ? <Navigate to="/" replace /> : element;
 };
 

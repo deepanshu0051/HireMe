@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { Lock, Eye, EyeOff, Briefcase, UserCheck, AlertCircle, Loader2 } from "lucide-react";
 import { saveAuth, getToken } from "../utils/auth";
@@ -101,14 +101,12 @@ const AccessGate = () => {
   const navigate = useNavigate();
 
   // ── Auth Flow Guard ────────────────────────────────────────────────────
-  // If a valid token is already present, skip the gate entirely.
-  // This handles the case where the user navigates directly to /access
-  // while still logged in. The PublicRoute in App.jsx also handles this
-  // at the router level, but this is a belt-and-suspenders guard.
   const existingToken = getToken();
-  if (existingToken && existingToken.length > 0) {
-    return <Navigate to="/" replace />;
-  }
+  useEffect(() => {
+    if (existingToken && existingToken.length > 0) {
+      navigate("/", { replace: true });
+    }
+  }, [existingToken, navigate]);
   // ──────────────────────────────────────────────────────────────────────
 
   const [accessPassword, setAccessPassword] = useState("");

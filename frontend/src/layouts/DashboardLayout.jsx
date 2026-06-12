@@ -61,7 +61,7 @@ const DashboardLayout = ({ children }) => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const token = localStorage.getItem("hireme_token");
+        const token = getToken();
         if (!token) return;
         const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/settings`, {
           headers: { "Authorization": `Bearer ${token}` }
@@ -81,7 +81,7 @@ const DashboardLayout = ({ children }) => {
       }
     };
     fetchSettings();
-  }, [isSidebarOpen]);
+  }, []);
 
   const handleSaveSchedule = async () => {
     if (role === "guest") {
@@ -142,8 +142,8 @@ const DashboardLayout = ({ children }) => {
       )}>
         <div className="p-4 flex items-center justify-between text-white"> {/* size-fix: p-6 -> p-4 */}
           <div className="flex items-center space-x-2"> {/* size-fix: space-x-3 -> space-x-2 */}
-            <div className="bg-white p-1.5 rounded-lg">
-              <Briefcase size={20} className="text-white" /> {/* size-fix logo */}
+            <div className="bg-white/20 p-1.5 rounded-lg border border-white/30">
+              <Briefcase size={20} className="text-white" />
             </div>
             <span className="text-lg font-bold tracking-tight">HireMe</span> {/* size-fix: text-xl -> text-lg */}
           </div>
@@ -273,8 +273,8 @@ const DashboardLayout = ({ children }) => {
             >
               <Menu size={20} /> {/* size-fix */}
             </button>
-            <div className="bg-white p-1 rounded-lg"> {/* size-fix p-1.5->p-1 */}
-              <Briefcase size={16} className="text-white" /> {/* size-fix size 18->16 */}
+            <div className="bg-white/20 p-1 rounded-lg border border-white/30">
+              <Briefcase size={16} className="text-white" />
             </div>
             <span className="text-base font-bold tracking-tight">HireMe</span> {/* size-fix text-lg->base */}
           </div>

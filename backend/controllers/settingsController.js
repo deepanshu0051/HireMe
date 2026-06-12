@@ -25,6 +25,9 @@ const getSettings = async (req, res) => {
     if (typeof settingsMap.cronEndHour === 'undefined') {
       settingsMap.cronEndHour = 17; 
     }
+    if (typeof settingsMap.emailsPerDay === 'undefined') {
+      settingsMap.emailsPerDay = 5;
+    }
 
     res.status(200).json({ success: true, data: settingsMap });
   } catch (error) {
@@ -82,8 +85,29 @@ const updateSchedule = async (req, res) => {
   }
 };
 
+
+/**
+ * @desc    Update emails-per-day cap
+ * @route   PUT /api/settings/emails-per-day
+ * @access  Private/Admin
+ */
+const updateEmailsPerDay = async (req, res) => {
+  try {
+    const raw = req.body.emailsPerDay;
+    const num = parseInt(raw, 10);
+    if (isNaN(num) || num < 1 || num > 5) {
+      return res.status(400).json({ success: false, message: 'emailsPerDay must be an integer between 1 and 5.' });
+    }
+    await AppSetting.findOneAndUpdate({ key: 'emailsPerDay' }, { value: num }, { upsert: true });
+    res.status(200).json({ success: true, message: 'Emails per day updated', data: { emailsPerDay: num } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update emails per day', error: error.message });
+  }
+};
+
 module.exports = {
   getSettings,
   updateAutoSend,
-  updateSchedule
+  updateSchedule,
+  updateEmailsPerDay
 };

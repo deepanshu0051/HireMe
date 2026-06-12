@@ -116,7 +116,11 @@ const Settings = () => {
   const [isAutoSendLoading, setIsAutoSendLoading] = useState(false);
 
   // Auto-Send Local UI States
-  const [emailsPerDay, setEmailsPerDay] = useState(() => loadLocal("emailsPerDay", 5));
+  // emailsPerDay: savedValue = last persisted, pendingValue = UI local (not yet saved)
+  const [savedEmailsPerDay, setSavedEmailsPerDay] = useState(5);
+  const [emailsPerDay, setEmailsPerDay] = useState(5);
+  const [isEpdEditing, setIsEpdEditing] = useState(false);
+  const [isEpdSaving, setIsEpdSaving] = useState(false);
   const [sendTime, setSendTime] = useState(() => loadLocal("sendTime", "09:00"));
   const [selectedDays, setSelectedDays] = useState(() => loadLocal("selectedDays", ["Mon", "Tue", "Wed", "Thu", "Fri"]));
 
@@ -134,15 +138,14 @@ const Settings = () => {
     weeklyReport: false,
   }));
 
-  // Sync to local storage
-  React.useEffect(() => { saveLocal("emailsPerDay", emailsPerDay); }, [emailsPerDay]);
+  // Sync to local storage (only non-epd items)
   React.useEffect(() => { saveLocal("sendTime", sendTime); }, [sendTime]);
   React.useEffect(() => { saveLocal("selectedDays", selectedDays); }, [selectedDays]);
   React.useEffect(() => { saveLocal("notifs", notifs); }, [notifs]);
 
-  // Load Auto-Send exactly from Server on Mount
+  // Load Auto-Send + emailsPerDay from Server on Mount
   React.useEffect(() => {
-    if (isGuest()) return; // Guests can't fetch real settings
+    if (isGuest()) return;
     const fetchSettings = async () => {
       try {
         const res = await fetch(`${BASE_URL}/api/settings`, {
@@ -151,6 +154,9 @@ const Settings = () => {
         const json = await res.json();
         if (json.success && json.data) {
           setAutoSendState(json.data.autoSendEnabled || false);
+          const epd = json.data.emailsPerDay ?? 5;
+          setSavedEmailsPerDay(epd);
+          setEmailsPerDay(epd);
         }
       } catch (err) {
         console.error("Failed to fetch settings", err);
@@ -228,29 +234,64 @@ const Settings = () => {
 
 
           {/* Emails Per Day stepper */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-2 px-1 gap-3 sm:gap-0"> {/* size-fix py-2 gap-3 */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-2 px-1 gap-3 sm:gap-0">
             <div>
               <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Emails Per Day</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>How many companies to email daily</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>Max companies to email per day (1–5)</p>
             </div>
-            <div className="flex items-center space-x-2"> {/* size-fix space-x-2 */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  if (emailsPerDay <= 1) showToast("Minimum limit is 1 email per day", "info");
-                  else setEmailsPerDay(p => p - 1);
-                }}
-                className="w-7 h-7 rounded-md bg-[#2563EB] text-white font-bold text-base flex items-center justify-center shadow hover:bg-[#1d4ed8] transition-colors" /* size-fix w-7 h-7 rounded-md text-base */
+                onClick={() => { if (emailsPerDay > 1) setEmailsPerDay(p => p - 1); }}
+                className="w-7 h-7 rounded-md bg-[#2563EB] text-white font-bold text-base flex items-center justify-center shadow hover:bg-[#1d4ed8] transition-colors"
               >−</button>
-              <span className="text-xl font-bold w-10 text-center" style={{ color: "var(--text-primary)" }}> {/* size-fix text-xl */}
+              <span className="text-xl font-bold w-10 text-center" style={{ color: "var(--text-primary)" }}>
                 {emailsPerDay}
               </span>
               <button
-                onClick={() => {
-                  if (emailsPerDay >= 20) showToast("Maximum limit is 20 emails per day", "info");
-                  else setEmailsPerDay(p => p + 1);
-                }}
-                className="w-7 h-7 rounded-md bg-[#2563EB] text-white font-bold text-base flex items-center justify-center shadow hover:bg-[#1d4ed8] transition-colors" /* size-fix w-7 h-7 rounded-md text-base */
+                onClick={() => { if (emailsPerDay < 5) setEmailsPerDay(p => p + 1); }}
+                className="w-7 h-7 rounded-md bg-[#2563EB] text-white font-bold text-base flex items-center justify-center shadow hover:bg-[#1d4ed8] transition-colors"
               >+</button>
+
+              {/* Set / Cancel */}
+              {isEpdEditing ? (
+                <button
+                  onClick={() => { setEmailsPerDay(savedEmailsPerDay); setIsEpdEditing(false); }}
+                  className="ml-1 px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (isGuest()) {
+                      setEmailsPerDay(savedEmailsPerDay);
+                      showToast("Guest mode — saving disabled. Admin only.", "error");
+                      return;
+                    }
+                    setIsEpdSaving(true);
+                    try {
+                      const res = await fetch(`${BASE_URL}/api/settings/emails-per-day`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+                        body: JSON.stringify({ emailsPerDay }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok || !data.success) throw new Error(data.message || "Failed");
+                      setSavedEmailsPerDay(emailsPerDay);
+                      setIsEpdEditing(true);
+                      showToast(`Saved — max ${emailsPerDay} email${emailsPerDay > 1 ? 's' : ''}/day ✓`, "success");
+                    } catch (err) {
+                      showToast(err.message || "Failed to save.", "error");
+                    } finally {
+                      setIsEpdSaving(false);
+                    }
+                  }}
+                  disabled={isEpdSaving || emailsPerDay === savedEmailsPerDay}
+                  className="ml-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#2563EB] text-white hover:bg-[#1d4ed8] disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isEpdSaving ? "Saving..." : "Set"}
+                </button>
+              )}
             </div>
           </div>
           <div style={{ borderBottom: "1px solid var(--border-color)" }} />
