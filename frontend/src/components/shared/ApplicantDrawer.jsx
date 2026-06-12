@@ -32,20 +32,20 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-gray-800 shadow-2xl z-[70] flex flex-col"
+            className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-[70] flex flex-col"
           >
             {/* Header */}
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                <div className="flex items-center space-x-4">
                   <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl">
                      {applicant.name[0]}
                   </div>
                   <div>
-                     <h2 className="text-xl font-bold dark:text-white">{applicant.name}</h2>
+                     <h2 className="text-xl font-bold">{applicant.name}</h2>
                      <p className="text-sm text-gray-500">{applicant.role}</p>
                   </div>
                </div>
-               <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                   <X size={20} className="text-gray-400" />
                </button>
             </div>
@@ -53,7 +53,7 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto">
                {/* Quick Info Bar */}
-               <div className="bg-gray-50/50 dark:bg-gray-900/30 p-6 flex flex-wrap gap-6 items-center justify-between border-b border-gray-100 dark:border-gray-700">
+               <div className="bg-gray-50/50 p-6 flex flex-wrap gap-6 items-center justify-between border-b border-gray-100">
                   <div className="flex items-center space-x-6 text-sm text-gray-500">
                      <span className="flex items-center"><MapPin size={14} className="mr-1.5" /> {applicant.location}</span>
                      <span className="flex items-center"><Clock size={14} className="mr-1.5" /> {applicant.experience} exp</span>
@@ -76,7 +76,7 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
                               "px-4 py-1.5 rounded-full text-xs font-semibold transition-all border",
                               applicant.status === s 
                                 ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100" 
-                                : "bg-white text-gray-500 border-gray-100 hover:border-blue-200 dark:bg-gray-800 dark:border-gray-700"
+                                : "bg-white text-gray-500 border-gray-100 hover:border-blue-200"
                             )}
                           >
                             {s}
@@ -88,19 +88,19 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
                   {/* AI Match Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                      <AIMatchScore score={applicant.matchScore} className="md:col-span-1" />
-                     <Card className="md:col-span-2 border-none bg-blue-50/50 dark:bg-blue-900/10 p-5">
+                     <Card className="md:col-span-2 border-none bg-blue-50/50 p-5">
                         <div className="flex items-center space-x-2 text-blue-600 mb-2">
                            <ShieldCheck size={18} />
                            <h4 className="font-bold text-sm">AI Fit Analysis</h4>
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed italic">
+                        <p className="text-xs text-gray-600 leading-relaxed italic">
                           "{applicant.aiSummary}"
                         </p>
                      </Card>
                   </div>
 
                   {/* Tabs */}
-                  <div className="border-b border-gray-100 dark:border-gray-700">
+                  <div className="border-b border-gray-100">
                      <div className="flex space-x-8">
                         {["overview", "resume", "activity"].map(tab => (
                           <button
@@ -126,7 +126,7 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
                              <h4 className="font-bold text-sm">Top Skills</h4>
                              <div className="flex flex-wrap gap-2">
                                 {applicant.skills.map(skill => (
-                                  <span key={skill} className="px-3 py-1 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-lg border border-gray-100 dark:border-gray-600">
+                                  <span key={skill} className="px-3 py-1 bg-gray-50 text-gray-600 text-xs rounded-lg border border-gray-100">
                                      {skill}
                                   </span>
                                 ))}
@@ -134,7 +134,7 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
                           </div>
                           
                           <div className="grid grid-cols-2 gap-4">
-                             <div className="p-4 rounded-2xl border border-gray-50 dark:border-gray-700">
+                             <div className="p-4 rounded-2xl border border-gray-50">
                                 <div className="flex items-center space-x-2 text-gray-400 mb-2">
                                    <Briefcase size={14} />
                                    <span className="text-[10px] font-bold uppercase">Education</span>
@@ -142,7 +142,7 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
                                 <p className="text-xs font-bold">M.S. in Design Strategy</p>
                                 <p className="text-[10px] text-gray-500">Stanford University</p>
                              </div>
-                             <div className="p-4 rounded-2xl border border-gray-50 dark:border-gray-700">
+                             <div className="p-4 rounded-2xl border border-gray-50">
                                 <div className="flex items-center space-x-2 text-gray-400 mb-2">
                                    <Star size={14} />
                                    <span className="text-[10px] font-bold uppercase">Highlights</span>
@@ -159,11 +159,11 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
                           {applicant.timeline.map((item, idx) => (
                             <div key={idx} className="flex space-x-4">
                                <div className="relative flex flex-col items-center">
-                                  <div className="h-4 w-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center border-2 border-blue-600 z-10" />
-                                  {idx !== applicant.timeline.length - 1 && <div className="h-full w-0.5 bg-gray-100 dark:bg-gray-700 absolute top-4" />}
+                                  <div className="h-4 w-4 rounded-full bg-blue-100 flex items-center justify-center border-2 border-blue-600 z-10" />
+                                  {idx !== applicant.timeline.length - 1 && <div className="h-full w-0.5 bg-gray-100 absolute top-4" />}
                                </div>
                                <div className="pb-8">
-                                  <p className="text-xs font-bold dark:text-white">{item.event}</p>
+                                  <p className="text-xs font-bold">{item.event}</p>
                                   <p className="text-[10px] text-gray-500">{item.date}</p>
                                </div>
                             </div>
@@ -175,7 +175,7 @@ const ApplicantDrawer = ({ isOpen, onClose, applicant }) => {
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30">
+            <div className="p-6 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
                <Button variant="ghost" className="text-gray-500">View Full Resume</Button>
                <div className="flex space-x-3">
                   <Button variant="outline" className="text-red-500 border-red-500 hover:bg-red-50">Reject</Button>

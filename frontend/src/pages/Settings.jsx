@@ -4,7 +4,7 @@ import {
   Check, X, Info, Download, Trash2
 } from "lucide-react";
 import { DashboardLayout } from "../layouts/DashboardLayout";
-import { useTheme } from "../context/ThemeContext";
+
 import { isGuest, getToken } from "../utils/auth";
 import { guestData } from "../utils/guestData";
 
@@ -24,7 +24,7 @@ const Toggle = ({ checked, onChange, color = "#2563EB" }) => (
     }}
   >
     <span
-      className="inline-block bg-white dark:bg-slate-800 rounded-full shadow-md transition-all duration-300"
+      className="inline-block bg-white rounded-full shadow-md transition-all duration-300"
       style={{
         width: 22,
         height: 22,
@@ -97,7 +97,7 @@ const ToggleRow = ({ label, subtext, checked, onChange, color, divider = true })
 
 // ─── Main Settings Component ───────────────────────────────────
 const Settings = () => {
-  const { isDark, toggleTheme } = useTheme();
+  
 
   // Local storage helpers
   const loadLocal = (key, defaultVal) => {
@@ -209,68 +209,7 @@ const Settings = () => {
       <div className="max-w-[800px] mx-auto py-4 space-y-6 animate-fade-in"> {/* size-fix py-4 space-y-6 */}
         <h1 className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}>Settings</h1> {/* size-fix text-lg md:text-xl */}
 
-        {/* ─── SECTION 1: APPEARANCE ─── */}
-        <SectionCard title="Appearance" icon={<span style={{ fontSize: 18 }}>🎨</span>}> {/* size-fix 20->18 */}
-          <div
-            className="flex flex-col sm:flex-row items-center justify-between p-3 md:p-4 rounded-lg gap-3 sm:gap-0" /* size-fix p-3 md:p-4 rounded-lg gap-3 */
-            style={{ backgroundColor: "var(--bg-secondary)", border: "1px solid var(--border-color)" }}
-          >
-            {/* Light side */}
-            <div className="flex items-center space-x-3">
-              <Sun size={22} className="text-yellow-500" />
-              <div>
-                <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Light Mode</p>
-                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Clean white interface</p>
-              </div>
-            </div>
-
-            {/* Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="relative inline-flex items-center rounded-full transition-all duration-300 focus:outline-none my-2 sm:my-0 mx-4"
-              style={{
-                width: 56,
-                height: 30,
-                backgroundColor: isDark ? "#2563EB" : "#CBD5E1",
-              }}
-            >
-              <span
-                className="inline-block bg-white dark:bg-slate-800 rounded-full shadow-md transition-all duration-300"
-                style={{
-                  width: 24,
-                  height: 24,
-                  transform: isDark ? "translateX(28px)" : "translateX(4px)",
-                }}
-              />
-            </button>
-
-            {/* Dark side */}
-            <div className="flex items-center space-x-3">
-              <div className="text-right">
-                <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Dark Mode</p>
-                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Easy on the eyes</p>
-              </div>
-              <Moon size={22} className="text-indigo-400" />
-            </div>
-          </div>
-
-          {/* Badge */}
-          <div className="flex justify-center">
-            <span
-              className="px-4 py-1.5 rounded-full text-xs font-bold"
-              style={{
-                backgroundColor: isDark ? "#1E3A5F" : "#EFF6FF",
-                color: isDark ? "#93C5FD" : "#1E40AF",
-                border: "1px solid",
-                borderColor: isDark ? "#334155" : "#BFDBFE",
-              }}
-            >
-              {isDark ? "🌙 Currently: Dark Mode" : "☀️ Currently: Light Mode"}
-            </span>
-          </div>
-        </SectionCard>
-
-        {/* ─── SECTION 2: AUTO-SEND ─── */}
+        {/* ─── SECTION 1: AUTO-SEND ─── */}
         <SectionCard title="Auto-Send Configuration" icon={<Send size={18} />}> {/* size-fix size 18 */}
           {isGuest() && (
             <div className="bg-amber-50 border-l-4 border-amber-500 p-2.5 rounded text-xs text-amber-800 mb-3"> {/* size-fix p-2.5 text-xs mb-3 */}
@@ -486,10 +425,10 @@ const Settings = () => {
             <div>
               <p className="text-xs font-bold uppercase" style={{ color: "var(--text-secondary)" }}>Email Address</p>
               <p className="text-sm font-semibold mt-0.5" style={{ color: "var(--text-primary)" }}>
-                {isGuest() ? guestData.email : "deepubhati0051@gmail.com"}
+                {isGuest() ? guestData.email : "user@hireme.com"}
               </p>
             </div>
-            <button className="text-xs font-bold text-[#2563EB] hover:underline">Change</button>
+            <button disabled className="text-xs font-bold text-gray-400 cursor-not-allowed" title="Changing email is coming soon">Change</button>
           </div>
           <div style={{ borderBottom: "1px solid var(--border-color)" }} />
 
@@ -501,10 +440,9 @@ const Settings = () => {
             </div>
             <button
               onClick={() => {
-                if (isGuest()) showToast("Guest mode — saving disabled. Admin access only.", "error");
-                else showToast("Data export will be ready shortly", "info");
+                showToast("Data export is coming soon. Feature unavailable in current tier.", "info");
               }}
-              className="flex items-center space-x-2 border px-3 py-1.5 rounded-lg text-xs font-bold transition-all" /* size-fix px-3 py-1.5 */
+              className="flex items-center space-x-2 border px-3 py-1.5 rounded-lg text-xs font-bold transition-all opacity-70 cursor-not-allowed" /* size-fix px-3 py-1.5 */
               style={{
                 borderColor: "#2563EB",
                 color: "#2563EB",
@@ -580,7 +518,7 @@ const Settings = () => {
             </div>
             <h3 className="text-base md:text-lg font-bold" style={{ color: "var(--text-primary)" }}>Clear all data?</h3> {/* size-fix text-base */}
             <p className="text-xs md:text-sm mt-1.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}> {/* size-fix text-xs mt-1.5 */}
-              This will delete all your mail history and application data. Are you sure? This action cannot be undone.
+              This module is disabled. Full data clear operations will be available in the next release.
             </p>
             <div className="flex items-center space-x-2 mt-6"> {/* size-fix space-x-2 mt-6 */}
               <button
@@ -588,21 +526,13 @@ const Settings = () => {
                 className="flex-1 py-2 rounded-lg text-sm font-bold transition-all" /* size-fix py-2 */
                 style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)" }}
               >
-                Cancel
+                Close
               </button>
               <button
-                onClick={() => {
-                  if (isGuest()) {
-                    setShowClearModal(false);
-                    showToast("Guest mode — saving disabled. Admin access only.", "error");
-                    return;
-                  }
-                  setShowClearModal(false);
-                  showToast("All data cleared.", "error");
-                }}
-                className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition-all shadow-md" /* size-fix py-2 */
+                disabled
+                className="flex-1 bg-gray-300 text-gray-500 py-2 rounded-lg text-sm font-bold shadow-md cursor-not-allowed" /* size-fix py-2 */
               >
-                Confirm Delete
+                Currently Unavailable
               </button>
             </div>
           </div>

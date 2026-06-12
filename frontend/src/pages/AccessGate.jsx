@@ -242,7 +242,7 @@ const AccessGate = () => {
         </div>
 
         {/* ── Card ── */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 space-y-5 border border-slate-100">
+        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-5 border border-slate-100">
           
           {/* Privacy warning */}
           <div className="flex flex-col items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-2">

@@ -462,14 +462,14 @@ const Profile = () => {
         {showToast && (
           <div className="fixed bottom-8 right-8 z-[200] animate-slide-in-right">
             <div className={`text-white px-4 py-2 rounded-xl shadow-lg flex items-center space-x-3`} style={{ backgroundColor: toastColor }}>
-              <Check size={20} className="bg-white dark:bg-slate-800/20 rounded-full p-0.5" />
+              <Check size={20} className="bg-white rounded-full p-0.5" />
               <span className="font-bold text-sm">{toastMsg}</span>
             </div>
           </div>
         )}
 
         {/* TOP SECTION - HERO CARD */}
-        <div className="bg-white dark:bg-slate-800 border border-[#BFDBFE] rounded-lg p-6 shadow-[0_4px_20px_rgba(37,99,235,0.08)] flex flex-col md:flex-row items-center md:items-start justify-between gap-6 relative overflow-hidden">
+        <div className="border border-[#BFDBFE] rounded-lg p-6 shadow-[0_4px_20px_rgba(37,99,235,0.08)] flex flex-col md:flex-row items-center md:items-start justify-between gap-6 relative overflow-hidden" style={{ backgroundColor: "var(--card-bg)" }}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16"></div>
           
           <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 z-10">
@@ -484,7 +484,7 @@ const Profile = () => {
               </div>
               <button 
                 onClick={() => fileInputRef.current.click()}
-                className="absolute bottom-1 right-1 bg-white dark:bg-slate-800 border border-[#E2E8F0] p-2 rounded-full shadow-md text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all"
+                className="absolute bottom-1 right-1 bg-white border border-[#E2E8F0] p-2 rounded-full shadow-md text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all"
               >
                 <Camera size={16} />
               </button>
@@ -499,9 +499,9 @@ const Profile = () => {
 
             {/* Basic Info */}
             <div className="text-center md:text-left space-y-1">
-              <h1 className="text-lg md:text-xl font-bold text-[#0F172A]">{profile.fullName || "User Name"}</h1>
-              <p className="text-[#64748B] font-medium text-xs">{profile.role || "Role not set"}</p>
-              <div className="flex items-center justify-center md:justify-start space-x-2 text-[#94A3B8] text-xs pt-1">
+              <h1 className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}>{profile.fullName || "User Name"}</h1>
+              <p className="font-medium text-xs" style={{ color: "var(--text-secondary)" }}>{profile.role || "Role not set"}</p>
+              <div className="flex items-center justify-center md:justify-start space-x-2 text-xs pt-1" style={{ color: "var(--text-muted)" }}>
                 <MapPin size={12} />
                 <span>{profile.address || "Location not set"}</span>
               </div>
@@ -520,7 +520,7 @@ const Profile = () => {
 
           <div className="flex flex-col gap-2 relative z-10 items-end">
             {isGuest() && (
-              <div className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-500 dark:text-gray-400 rounded-lg font-bold text-xs border border-[#E2E8F0] shadow-sm cursor-help" title="Guest interactions disabled for DB">
+              <div className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-bold text-xs border border-[#E2E8F0] shadow-sm cursor-help" title="Guest interactions disabled for DB">
                 <span>View Only (Guest Mode)</span>
               </div>
             )}
@@ -530,7 +530,7 @@ const Profile = () => {
               className={`flex items-center justify-center space-x-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md group ${
                 isEditing 
                   ? "bg-[#2563EB] text-white hover:bg-[#1d4ed8]" 
-                  : "border border-[#BFDBFE] text-[#2563EB] bg-white dark:bg-slate-800 hover:bg-[#EFF6FF]"
+                  : "border border-[#BFDBFE] text-[#2563EB] bg-white hover:bg-[#EFF6FF]"
               }`}
             >
               {isEditing ? <Save size={14} /> : <Edit3 size={14} />}
@@ -540,10 +540,10 @@ const Profile = () => {
         </div>
 
         {/* SECTION 2 - PERSONAL INFORMATION */}
-        <div className="bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
-          <div className="flex items-center space-x-2 border-b border-[#F1F5F9] pb-3">
+        <div className="border rounded-lg p-4 md:p-6 shadow-sm space-y-4" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border-color)" }}>
+          <div className="flex items-center space-x-2 border-b pb-3" style={{ borderBottomColor: "var(--border-color)" }}>
             <User size={18} className="text-[#2563EB]" />
-            <h2 className="text-base md:text-lg font-bold text-[#0F172A]">Personal Information</h2>
+            <h2 className="text-base md:text-lg font-bold" style={{ color: "var(--text-primary)" }}>Personal Information</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -566,9 +566,9 @@ const Profile = () => {
               error={errors.mobile} borderOverride={borderFor("mobile")}
             />
             <div className="space-y-2" data-validation-error={!!errors.role || undefined}>
-              <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider pl-1">Current Role</label>
+              <label className="text-xs font-bold uppercase tracking-wider pl-1" style={{ color: "var(--text-secondary)" }}>Current Role</label>
               <div className="relative group">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-[#2563EB] transition-colors" style={{ color: "var(--text-muted)" }}>
                   <Briefcase size={16} />
                 </div>
                 {isEditing ? (
@@ -577,8 +577,8 @@ const Profile = () => {
                     value={profile.role}
                     onChange={handleInputChange}
                     onBlur={() => handleBlur("role")}
-                    className="w-full bg-white dark:bg-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm font-medium outline-none shadow-sm"
-                    style={{ border: borderFor("role") || "1px solid #2563EB" }}
+                    className="w-full rounded-lg py-2 pl-10 pr-4 text-sm font-medium outline-none shadow-sm"
+                    style={{ border: borderFor("role") || "1px solid #2563EB", backgroundColor: "var(--input-bg)", color: "var(--text-primary)" }}
                   >
                     <option value="">Select Role</option>
                     {[
@@ -588,7 +588,7 @@ const Profile = () => {
                     ].map(role => <option key={role} value={role}>{role}</option>)}
                   </select>
                 ) : (
-                  <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-2 pl-10 pr-4 text-sm font-semibold text-[#0F172A]">
+                  <div className="w-full border rounded-lg py-2 pl-10 pr-4 text-sm font-semibold" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}>
                     {profile.role || "-"}
                   </div>
                 )}
@@ -607,8 +607,8 @@ const Profile = () => {
 
             {/* Languages Known */}
             <div className="md:col-span-2 space-y-3" data-validation-error={!!errors.languages || undefined}>
-              <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider pl-1">Languages Known</label>
-              <div className={`flex flex-wrap gap-2 p-3 rounded-xl border ${isEditing ? "border-[#BFDBFE] bg-white dark:bg-slate-800" : "border-[#E2E8F0] bg-[#F8FAFC]"}`}>
+              <label className="text-xs font-bold uppercase tracking-wider pl-1" style={{ color: "var(--text-secondary)" }}>Languages Known</label>
+              <div className={`flex flex-wrap gap-2 p-3 rounded-xl border ${isEditing ? "border-[#BFDBFE]" : ""}`} style={{ backgroundColor: isEditing ? "var(--input-bg)" : "var(--bg-secondary)", borderColor: isEditing ? undefined : "var(--border-color)" }}>
                 {languages.map(lang => (
                   <Tag 
                     key={lang} 
@@ -618,7 +618,7 @@ const Profile = () => {
                   />
                 ))}
                 {isEditing && (
-                  <div className="flex items-center bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg pl-3 pr-1 py-1 ml-1 shadow-sm">
+                  <div className="flex items-center border rounded-lg pl-3 pr-1 py-1 ml-1 shadow-sm" style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}>
                     <input 
                       type="text" 
                       placeholder="Add language" 
@@ -642,14 +642,14 @@ const Profile = () => {
         </div>
 
         {/* SECTION 3 - SKILLS */}
-        <div className="bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4" data-validation-error={!!errors.skills || undefined}>
+        <div className="border rounded-lg p-4 md:p-6 shadow-sm space-y-4" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border-color)" }} data-validation-error={!!errors.skills || undefined}>
           <div className="flex items-center space-x-2 border-b border-[#F1F5F9] pb-3">
             <Code size={18} className="text-[#2563EB]" />
-            <h2 className="text-base md:text-lg font-bold text-[#0F172A]">My Skills <span className="text-xs font-medium text-[#94A3B8] ml-2">✨ Sparkle magic</span></h2>
+            <h2 className="text-base md:text-lg font-bold" style={{ color: "var(--text-primary)" }}>My Skills <span className="text-xs font-medium ml-2" style={{ color: "var(--text-muted)" }}>✨ Sparkle magic</span></h2>
           </div>
 
           <div className="space-y-6">
-            <div className={`flex flex-wrap gap-3 p-4 rounded-xl border ${isEditing ? "border-[#BFDBFE] bg-white dark:bg-slate-800" : "border-transparent bg-[#F0F7FF]/50"}`}>
+            <div className={`flex flex-wrap gap-3 p-4 rounded-xl border ${isEditing ? "border-[#BFDBFE]" : "border-transparent"}`} style={{ backgroundColor: isEditing ? "var(--input-bg)" : "rgba(240,247,255,0.5)" }}>
               {skills.map(skill => (
                 <div key={skill} className="bg-[#EFF6FF] border border-[#BFDBFE] text-[#1E40AF] px-4 py-1.5 rounded-full text-xs font-bold flex items-center space-x-2 animate-fade-in group shadow-sm transition-all hover:bg-[#DBEAFE] hover:border-[#3B82F6]">
                   <span>{skill}</span>
@@ -668,7 +668,7 @@ const Profile = () => {
                   <input 
                     type="text" 
                     placeholder="Type skill name..." 
-                    className="flex-1 bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#2563EB] transition-all"
+                    className="flex-1 border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#2563EB] transition-all" style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}
                     value={newSkill}
                     onChange={(e) => { setNewSkill(e.target.value); setTagErrors(p => ({ ...p, skill: "" })); }}
                     onKeyDown={(e) => e.key === "Enter" && addTag("skill")}
@@ -687,10 +687,10 @@ const Profile = () => {
         </div>
 
         {/* SECTION 4 - SOCIAL LINKS */}
-        <div className="bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
+        <div className="bg-white border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
           <div className="flex items-center space-x-2 border-b border-[#F1F5F9] pb-3">
             <Globe size={18} className="text-[#2563EB]" />
-            <h2 className="text-base md:text-lg font-bold text-[#0F172A]">Social Links</h2>
+            <h2 className="text-base md:text-lg font-bold" style={{ color: "var(--text-primary)" }}>Social Links</h2>
           </div>
 
           <div className="space-y-4">
@@ -710,16 +710,16 @@ const Profile = () => {
         </div>
 
         {/* SECTION 5 - JOB PREFERENCES */}
-        <div className="bg-white dark:bg-slate-800 border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-[#F1F5F9] dark:border-slate-700 pb-3">
+        <div className="bg-white border border-[#E2E8F0] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-3">
             <div className="flex items-center space-x-2">
               <Briefcase size={18} className="text-[#2563EB]" />
-              <h2 className="text-base md:text-lg font-bold text-[#0F172A] dark:text-gray-100">Job Preferences</h2>
+              <h2 className="text-base md:text-lg font-bold" style={{ color: "var(--text-primary)" }}>Job Preferences</h2>
             </div>
             {!isEditingPrefs ? (
               <button 
                 onClick={handleEditPrefsStart}
-                className="flex items-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-bold text-[#2563EB] bg-[#EFF6FF] dark:bg-transparent dark:text-gray-300 dark:border dark:border-slate-700 hover:bg-[#DBEAFE] dark:hover:bg-slate-700 transition-all"
+                className="flex items-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] transition-all"
               >
                 <Edit3 size={14} />
                 <span>Edit</span>
@@ -728,7 +728,7 @@ const Profile = () => {
               <div className="flex space-x-2">
                 <button 
                   onClick={handleEditPrefsCancel}
-                  className="bg-[#F8FAFC] dark:bg-slate-700 border border-[#E2E8F0] dark:border-slate-600 text-[#64748B] dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#F1F5F9] dark:hover:bg-slate-600 transition-colors"
+                  className="bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#F1F5F9] transition-colors"
                 >
                   Cancel
                 </button>
@@ -746,7 +746,7 @@ const Profile = () => {
             
             {/* Preferred Job Type */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-[#64748B] dark:text-gray-400 uppercase tracking-wider">Preferred Job Type</label>
+              <label className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Preferred Job Type</label>
               <div className="flex flex-wrap gap-2">
                 {["Full Time", "Remote", "Hybrid", "Internship"].map(type => (
                   <button 
@@ -756,12 +756,12 @@ const Profile = () => {
                     className={cn(
                       "px-3 py-1.5 rounded-full text-xs font-bold border transition-all disabled:opacity-90 disabled:cursor-default",
                       profile.jobType === type 
-                        ? "bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-100 dark:shadow-none" 
-                        : "bg-[#F8FAFC] dark:bg-slate-900 text-[#64748B] dark:text-gray-400 border-[#E2E8F0] dark:border-slate-700 hover:bg-[#F1F5F9] dark:hover:bg-slate-800"
+                        ? "bg-[#2563EB] text-white border-[#2563EB] shadow-md shadow-blue-100" 
+                        : "bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
                     )}
                   >
                     <div className="flex items-center space-x-1.5">
-                      <div className={cn("w-1.5 h-1.5 rounded-full", profile.jobType === type ? "bg-white dark:bg-white" : "bg-[#94A3B8] dark:bg-slate-500")}></div>
+                      <div className={cn("w-1.5 h-1.5 rounded-full", profile.jobType === type ? "bg-white" : "bg-[#94A3B8]")}></div>
                       <span>{type}</span>
                     </div>
                   </button>
@@ -771,8 +771,8 @@ const Profile = () => {
 
             {/* Preferred Locations */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-[#64748B] dark:text-gray-400 uppercase tracking-wider">Preferred Locations</label>
-              <div className="flex flex-wrap gap-2 p-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700">
+              <label className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Preferred Locations</label>
+              <div className="flex flex-wrap gap-2 p-2 rounded-xl border" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)" }}>
                 {prefLocations.map(loc => (
                   <Tag 
                     key={loc} 
@@ -782,11 +782,11 @@ const Profile = () => {
                   />
                 ))}
                 {isEditingPrefs && (
-                  <div className="flex items-center bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-lg px-2 py-1 ml-1 flex-1 min-w-[100px]">
+                  <div className="flex items-center border rounded-lg px-2 py-1 ml-1 flex-1 min-w-[100px]" style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)" }}>
                     <input 
                       type="text" 
                       placeholder="Add city" 
-                      className="text-[10px] font-bold outline-none w-full bg-transparent text-[#0F172A] dark:text-gray-100"
+                      className="text-[10px] font-bold outline-none w-full bg-transparent" style={{ color: "var(--text-primary)" }}
                       value={newLocation}
                       onChange={(e) => { setNewLocation(e.target.value); setTagErrors(p => ({ ...p, location: "" })); }}
                       onKeyDown={(e) => e.key === "Enter" && addTag("location")}
@@ -802,31 +802,31 @@ const Profile = () => {
 
             {/* Expected Salary Range */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[#64748B] dark:text-gray-400 uppercase tracking-wider">Expected Salary (LPA)</label>
+              <label className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Expected Salary (LPA)</label>
               
               {isEditingPrefs ? (
-                <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 rounded-lg p-2.5 border border-[#2563EB] shadow-sm flex-wrap gap-y-2 max-w-[200px]">
+                <div className="flex items-center space-x-2 rounded-lg p-2.5 border border-[#2563EB] shadow-sm flex-wrap gap-y-2 max-w-[200px]" style={{ backgroundColor: "var(--input-bg)" }}>
                   <div className="flex items-center space-x-1">
                     <input 
                       type="text" 
                       value={salMin} 
                       onChange={(e) => { setSalMin(e.target.value.replace(/\D/g, '').slice(0, 2)); setSalErr(""); }}
                       placeholder="Min"
-                      className="w-12 text-center text-sm font-bold bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700 rounded py-1 outline-none focus:border-[#2563EB] text-[#0F172A] dark:text-gray-100 transition-colors"
+                      className="w-12 text-center text-sm font-bold border rounded py-1 outline-none focus:border-[#2563EB] transition-colors" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}
                     />
-                    <span className="text-xs font-bold text-[#64748B] dark:text-gray-400 px-1">-</span>
+                    <span className="text-xs font-bold px-1" style={{ color: "var(--text-secondary)" }}>-</span>
                     <input 
                       type="text" 
                       value={salMax} 
                       onChange={(e) => { setSalMax(e.target.value.replace(/\D/g, '').slice(0, 2)); setSalErr(""); }}
                       placeholder="Max"
-                      className="w-12 text-center text-sm font-bold bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700 rounded py-1 outline-none focus:border-[#2563EB] text-[#0F172A] dark:text-gray-100 transition-colors"
+                      className="w-12 text-center text-sm font-bold bg-[#F8FAFC] border border-[#E2E8F0] rounded py-1 outline-none focus:border-[#2563EB] text-[#0F172A] transition-colors"
                     />
-                    <span className="text-xs font-bold text-[#0F172A] dark:text-gray-100 ml-1">LPA</span>
+                    <span className="text-xs font-bold ml-1" style={{ color: "var(--text-primary)" }}>LPA</span>
                   </div>
                 </div>
               ) : (
-                <div className="w-full max-w-[200px] bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-semibold text-[#0F172A] dark:text-gray-100 flex justify-between items-center cursor-default">
+                <div className="w-full max-w-[200px] border rounded-lg px-3 py-2 text-sm font-semibold flex justify-between items-center cursor-default" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}>
                   <span>{profile.expectedSalaryMinLpa || 1} – {profile.expectedSalaryMaxLpa || 2} LPA</span>
                 </div>
               )}
@@ -835,17 +835,17 @@ const Profile = () => {
 
             {/* Availability */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[#64748B] dark:text-gray-400 uppercase tracking-wider">Availability</label>
+              <label className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Availability</label>
               {isEditingPrefs ? (
                 <select 
                   value={profile.availability}
                   onChange={(e) => setProfile(p => ({ ...p, availability: e.target.value }))}
-                  className="w-full bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:border-[#2563EB] shadow-sm transition-colors text-[#0F172A] dark:text-gray-100"
+                  className="w-full border rounded-lg px-3 py-2 text-sm font-medium outline-none shadow-sm transition-colors" style={{ backgroundColor: "var(--input-bg)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}
                 >
                   {["Immediately Available", "15 Days", "30 Days", "45 Days", "60 Days", "90 Days"].map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
               ) : (
-                <div className="w-full bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-semibold text-[#0F172A] dark:text-gray-100 flex items-center cursor-default">
+                <div className="w-full border rounded-lg px-3 py-2 text-sm font-semibold flex items-center cursor-default" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}>
                   <span>{profile.availability || "Not Set"}</span>
                 </div>
               )}
@@ -862,9 +862,9 @@ const Profile = () => {
 // HELPER COMPONENTS
 const InputGroup = ({ label, name, value, icon, isEditing, onChange, onBlur, error, borderOverride }) => (
   <div className="space-y-2" data-validation-error={!!error || undefined}>
-    <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider pl-1">{label}</label>
+    <label className="text-xs font-bold uppercase tracking-wider pl-1" style={{ color: "var(--text-secondary)" }}>{label}</label>
     <div className="relative group">
-      <div className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isEditing ? "text-[#2563EB]" : "text-[#94A3B8]"}`}>
+      <div className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isEditing ? "text-[#2563EB]" : ""}`} style={{ color: !isEditing ? "var(--text-muted)" : undefined }}>
         {icon}
       </div>
       {isEditing ? (
@@ -874,11 +874,11 @@ const InputGroup = ({ label, name, value, icon, isEditing, onChange, onBlur, err
           value={value} 
           onChange={onChange}
           onBlur={onBlur}
-          className="w-full bg-white dark:bg-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm font-medium outline-none shadow-sm transition-all"
-          style={{ border: borderOverride || "1px solid #2563EB" }}
+          className="w-full rounded-lg py-2 pl-10 pr-4 text-sm font-medium outline-none shadow-sm transition-all"
+          style={{ border: borderOverride || "1px solid #2563EB", backgroundColor: "var(--input-bg)", color: "var(--text-primary)" }}
         />
       ) : (
-        <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-2 pl-10 pr-4 text-sm font-semibold text-[#0F172A]">
+        <div className="w-full border rounded-lg py-2 pl-10 pr-4 text-sm font-semibold" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}>
           {value || "-"}
         </div>
       )}
@@ -924,8 +924,8 @@ const SocialLinkInput = ({ icon, label, name, value, placeholder, onInlineSave }
               onChange={(e) => { setLocalVal(e.target.value); setError(""); }}
               placeholder={placeholder}
               autoFocus
-              className="flex-1 bg-white dark:bg-slate-800 rounded-lg py-2 pl-12 pr-4 text-sm font-medium outline-none shadow-sm transition-all"
-              style={{ border: error ? "1px solid #EF4444" : "1px solid #2563EB" }}
+              className="flex-1 rounded-lg py-2 pl-12 pr-4 text-sm font-medium outline-none shadow-sm transition-all"
+              style={{ border: error ? "1px solid #EF4444" : "1px solid #2563EB", backgroundColor: "var(--input-bg)", color: "var(--text-primary)" }}
             />
             <button 
               onClick={handleSave} 
@@ -935,21 +935,21 @@ const SocialLinkInput = ({ icon, label, name, value, placeholder, onInlineSave }
             </button>
             <button 
               onClick={handleCancel} 
-              className="bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#F1F5F9] transition-colors"
+              className="border px-3 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition-colors" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-secondary)" }}
             >
               Cancel
             </button>
           </div>
         ) : (
           <>
-            <div className="w-full bg-[#F8FAFC] flex items-center border border-[#E2E8F0] rounded-lg py-2 pl-12 pr-32 text-sm font-semibold text-[#1E40AF]">
+            <div className="w-full flex items-center border rounded-lg py-2 pl-12 pr-32 text-sm font-semibold" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}>
               {value && value.length > 0 ? (
                 <span className="truncate">{value}</span>
               ) : (
-                <span className="text-[#94A3B8] font-medium">No {label.toLowerCase()} configured</span>
+                <span className="font-medium" style={{ color: "var(--text-muted)" }}>No {label.toLowerCase()} configured</span>
               )}
             </div>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center bg-[#F8FAFC] px-1 space-x-1">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center px-1 space-x-1" style={{ backgroundColor: "var(--bg-secondary)" }}>
               {value && value.length > 0 && (
                 <button 
                   onClick={() => window.open(value.startsWith('http') ? value : `https://${value}`, "_blank")}

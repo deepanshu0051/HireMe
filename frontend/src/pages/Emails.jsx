@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Search, ChevronLeft, ChevronRight, MoreVertical, Paperclip, Send, Mail, AlertCircle, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Paperclip, Send, Mail, AlertCircle, Loader2 } from "lucide-react";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import DoubleTick from "../components/ui/DoubleTick";
 import { cn } from "../utils/cn";
-import { getToken } from "../utils/auth";
+import { getToken, getRole } from "../utils/auth";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -20,6 +20,7 @@ const Emails = () => {
   const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [error, setError] = useState(null);
+  const [isSending, setIsSending] = useState(false);
 
   // 1. Fetch Companies on Mount
   useEffect(() => {
@@ -108,9 +109,52 @@ const Emails = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const handleManualSend = async () => {
+    if (getRole() !== 'admin') {
+      alert("Guest mode — sending disabled. Admin access only.");
+      return;
+    }
+    if (!selectedId) return;
+
+    setIsSending(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/emails/send/send`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          companyId: selectedId,
+          subject: "Application Follow-Up",
+          body: "Hello Hiring Team,\n\nI am writing to express my continued interest in any relevant open roles at your organization. Please refer to my candidate profile for full details.\n\nBest regards,\nCandidate"
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Optimistically rendering the newly tracked email without a full reload
+        setSelectedLogs(prev => [...prev, data.data]);
+        
+        // Also update parent company to Sent visually
+        setCompanies(prev => prev.map(c => 
+          c._id === selectedId 
+            ? { ...c, status: 'Sent', sentAt: new Date().toISOString() } 
+            : c
+        ));
+      } else {
+        alert(data.message || "Failed to dispatch email");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error dispatching email");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-64px)] bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-xl border border-[#E2E8F0]">
+      <div className="flex h-[calc(100vh-64px)] bg-white rounded-xl overflow-hidden shadow-xl border border-[#E2E8F0]">
         
         {/* LEFT PANEL */}
         <div className={cn(
@@ -118,7 +162,7 @@ const Emails = () => {
           showMobileDetail ? "hidden md:flex" : "flex"
         )}>
           {/* Header */}
-          <div className="p-3 md:p-4 bg-white dark:bg-slate-800 border-b border-[#E2E8F0] flex items-center justify-between shadow-sm z-10"> {/* size-fix */}
+          <div className="p-3 md:p-4 bg-white border-b border-[#E2E8F0] flex items-center justify-between shadow-sm z-10"> {/* size-fix */}
             <h1 className="text-lg md:text-xl font-bold text-[#0F172A]">Mails Database</h1> {/* size-fix */}
             {!loadingCompanies && !error && (
               <span className="bg-[#1740A6] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
@@ -128,7 +172,7 @@ const Emails = () => {
           </div>
 
           {/* Search Bar */}
-          <div className="p-2 md:p-3 bg-white dark:bg-slate-800 border-b border-[#E2E8F0]"> {/* size-fix */}
+          <div className="p-2 md:p-3 bg-white border-b border-[#E2E8F0]"> {/* size-fix */}
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
               <input 
@@ -182,8 +226,8 @@ const Emails = () => {
                       <div className="flex flex-col items-end space-y-1.5 shrink-0 ml-1">
                         <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
                           company.status === 'Sent' ? 'bg-green-100 text-green-700' : 
-                          company.status === 'Failed' ? 'bg-red-100 text-red-600' : 'bg-gray-200 text-gray-500 dark:text-gray-400'
-                        }`}>
+                          company.status === 'Failed' ? 'bg-red-100 text-red-600' : ''
+                        }`} style={company.status !== 'Sent' && company.status !== 'Failed' ? { backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)", border: "1px solid var(--border-color)" } : {}}>
                           {company.status}
                         </span>
                         {company.sentAt && (
@@ -197,7 +241,7 @@ const Emails = () => {
             )}
           </div>
 
-          <div className="p-4 bg-white dark:bg-slate-800 border-t border-[#E2E8F0] flex items-center justify-between">
+          <div className="p-4 bg-white border-t border-[#E2E8F0] flex items-center justify-between">
             <button className="p-1 hover:bg-[#F1F5F9] rounded-md transition-colors text-[#94A3B8] disabled:opacity-30" disabled>
               <ChevronLeft size={18} />
             </button>
@@ -210,11 +254,11 @@ const Emails = () => {
 
         {/* RIGHT PANEL - THREAD VIEWER */}
         <div className={cn(
-          "flex-1 flex-col bg-white dark:bg-slate-800 relative",
+          "flex-1 flex-col bg-white relative",
           !showMobileDetail ? "hidden md:flex" : "flex w-full"
         )}>
           {loadingLogs ? (
-             <div className="absolute inset-0 bg-white dark:bg-slate-800/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+             <div className="absolute inset-0 bg-white backdrop-blur-sm z-50 flex flex-col items-center justify-center">
                <Loader2 size={32} className="animate-spin text-[#1740A6] mb-4" />
                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Compiling Database...</p>
              </div>
@@ -223,10 +267,10 @@ const Emails = () => {
           {selectedCompany ? (
             <>
               {/* Top View Header */}
-              <div className="p-3 md:p-4 bg-white dark:bg-slate-800 border-b border-[#E2E8F0] flex items-center justify-between shadow-sm z-20"> {/* size-fix */}
+              <div className="p-3 md:p-4 bg-white border-b border-[#E2E8F0] flex items-center justify-between shadow-sm z-20"> {/* size-fix */}
                 <div className="flex items-center space-x-2 md:space-x-3"> {/* size-fix */}
                   <button 
-                    className="md:hidden p-1 -ml-1 mr-1 hover:bg-gray-100 rounded-lg text-gray-500 dark:text-gray-400 transition-colors"  /* size-fix */
+                    className="md:hidden p-1 -ml-1 mr-1 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"  /* size-fix */
                     onClick={() => setShowMobileDetail(false)}
                   >
                     <ChevronLeft size={20} /> {/* size-fix */}
@@ -245,17 +289,13 @@ const Emails = () => {
                     <div className="flex items-center space-x-2 mt-0.5">
                       <p className="text-xs font-medium text-[#64748B]">{selectedCompany.hrEmail || 'No HR Email Attached'}</p> {/* size-fix text-xs */}
                       {selectedCompany.status === 'Sent' && (
-                        <span className="flex items-center space-x-1.5 ml-2 border-l border-gray-200 dark:border-slate-700 pl-3">
+                        <span className="flex items-center space-x-1.5 ml-2 border-l border-gray-200 pl-3">
                           <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div> {/* size-fix */}
                           <span className="text-[10px] tracking-wide text-green-600 font-bold uppercase">Dispatched</span> {/* size-fix text-[10px] */}
                         </span>
                       )}
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-5 text-[#94A3B8]">
-                  <Search size={20} className="cursor-pointer hover:text-[#1740A6] transition-colors" />
-                  <MoreVertical size={20} className="cursor-pointer hover:text-[#1740A6] transition-colors" />
                 </div>
               </div>
 
@@ -277,11 +317,11 @@ const Emails = () => {
                          <div className={`p-3 md:p-4 rounded-xl shadow-sm border ${ /* size-fix p-3 md:p-4 rounded-xl */
                             log.status === 'Sent' 
                               ? 'bg-[#1740A6] text-white rounded-tr-none border-[#0D2B75]' 
-                              : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-tl-none border-gray-200 dark:border-slate-700'
-                         }`}>
+                              : 'rounded-tl-none border'
+                         }`} style={log.status !== 'Sent' ? { backgroundColor: "var(--card-bg)", color: "var(--text-primary)", borderColor: "var(--border-color)" } : {}}>
                            {log.subject && (
                               <p className={`text-sm font-bold mb-3 pb-2 border-b ${
-                                 log.status === 'Sent' ? 'border-white/20' : 'border-gray-100 dark:border-slate-800'
+                                 log.status === 'Sent' ? 'border-white/20' : 'border-gray-100'
                               }`}>
                                 Subject: {log.subject}
                               </p>
@@ -302,14 +342,25 @@ const Emails = () => {
                  )}
               </div>
 
-              {/* View Only Banner */}
-              <div className="p-3 bg-white dark:bg-slate-800 border-t border-[#E2E8F0] shadow-2xl flex items-center space-x-3 z-20"> {/* size-fix */}
+              {/* Action Banner */}
+              <div className="p-3 bg-white border-t border-[#E2E8F0] shadow-2xl flex items-center space-x-3 z-20"> {/* size-fix */}
                 <Paperclip size={18} className="text-[#94A3B8] cursor-not-allowed opacity-50 hidden sm:block" /> {/* size-fix */}
-                <div className="flex-1 bg-[#F8FAFC] border border-gray-100 dark:border-slate-800 rounded-lg px-3 py-2 text-xs text-[#94A3B8] font-bold italic shadow-inner"> {/* size-fix */}
-                  View-only mode active. Active SMTP bridges are managed by the CRON server.
+                <div className="flex-1 bg-[#F8FAFC] border border-gray-100 rounded-lg px-3 py-2 text-xs text-[#94A3B8] font-bold shadow-inner"> {/* size-fix */}
+                  {getRole() === 'admin' 
+                    ? "Admin Access: SMTP Bridge initialized. Manual dispatch active."
+                    : "View-only mode active. Active SMTP bridges are restricted to Admins."}
                 </div>
-                <button disabled className="p-2 bg-[#E2E8F0] text-white rounded-lg cursor-not-allowed"> {/* size-fix */}
-                  <Send size={16} /> {/* size-fix */}
+                <button 
+                  onClick={handleManualSend}
+                  disabled={isSending || getRole() !== 'admin'}
+                  className={cn(
+                    "p-2 rounded-lg flex items-center justify-center transition-colors",
+                    isSending || getRole() !== 'admin'
+                      ? "bg-[#E2E8F0] text-white cursor-not-allowed"
+                      : "bg-[#1740A6] text-white hover:bg-[#0D2B75]"
+                  )}
+                >
+                  {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 </button>
               </div>
             </>
@@ -319,8 +370,8 @@ const Emails = () => {
                 <Mail size={32} className="stroke-[1.5]" /> {/* size-fix */}
               </div>
               <div>
-                <h3 className="text-lg md:text-xl font-bold text-[#0F172A] tracking-tight">Database Viewer</h3> {/* size-fix */}
-                <p className="text-[#64748B] text-sm mt-2 max-w-sm mx-auto font-medium">
+                <h3 className="text-lg md:text-xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Database Viewer</h3> {/* size-fix */}
+                <p className="text-sm mt-2 max-w-sm mx-auto font-medium" style={{ color: "var(--text-secondary)" }}>
                   Select a company from the registry on the left to sync remote email threads and delivery statuses.
                 </p>
               </div>

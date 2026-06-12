@@ -38,7 +38,7 @@ const ApplicantManagement = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Talent Pool</h1>
+             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Talent Pool</h1>
              <p className="text-gray-500 font-medium font-sans">Review and manage candidates across your open positions.</p>
           </div>
           <div className="flex items-center space-x-3">
@@ -68,7 +68,7 @@ const ApplicantManagement = () => {
                    <input 
                     type="text" 
                     placeholder="Search by name, tags, or role..." 
-                    className="pl-10 pr-4 py-2 w-full bg-canvas border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/10 outline-none dark:text-white font-medium"
+                    className="pl-10 pr-4 py-2 w-full bg-canvas border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/10 outline-none font-medium"
                    />
                 </div>
               )}
@@ -78,8 +78,8 @@ const ApplicantManagement = () => {
               <Button variant="ghost" size="sm" className="h-10 px-3 text-gray-500 font-bold hover:bg-canvas">
                  <Filter size={16} className="mr-2" /> Filters
               </Button>
-              <div className="flex bg-canvas dark:bg-gray-900 p-1 rounded-lg border border-border">
-                 <button className="px-3 py-1.5 bg-white dark:bg-gray-800 text-primary rounded-md text-xs font-bold shadow-sm">Active</button>
+              <div className="flex bg-canvas p-1 rounded-lg border border-border">
+                 <button className="px-3 py-1.5 bg-white text-primary rounded-md text-xs font-bold shadow-sm">Active</button>
                  <button className="px-3 py-1.5 text-gray-400 text-xs font-bold">Archived</button>
               </div>
            </div>
@@ -107,7 +107,7 @@ const ApplicantManagement = () => {
                      />
                   </div>
                   
-                  <div className="h-14 w-14 rounded-xl bg-canvas dark:bg-gray-800 flex items-center justify-center text-primary font-bold text-xl border border-border">
+                  <div className="h-14 w-14 rounded-xl bg-canvas flex items-center justify-center text-primary font-bold text-xl border border-border">
                      {applicant.name[0]}
                   </div>
 
@@ -115,7 +115,7 @@ const ApplicantManagement = () => {
                      <div className="flex items-center justify-between mb-2">
                         <h4 
                           onClick={() => handleViewProfile(applicant)}
-                          className="text-base font-bold text-gray-900 dark:text-white cursor-pointer hover:text-primary transition-colors leading-tight"
+                          className="text-base font-bold text-gray-900 cursor-pointer hover:text-primary transition-colors leading-tight"
                         >
                           {applicant.name}
                         </h4>

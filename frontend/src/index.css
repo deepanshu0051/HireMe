@@ -36,41 +36,11 @@
   --radius-premium: 10px;
 }
 
-/* DARK MODE VARIABLES */
-html.dark {
-  --bg-primary: #0F172A;
-  --bg-secondary: #1E293B;
-  --card-bg: #1E293B;
-  --stat-bg: #1E293B;
-  --stat-border: #334155;
-  --stat-label: #60A5FA;
-  --stat-value: #E2E8F0;
-  --row-bg: #1E293B;
-  --row-border: #334155;
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-  --input-bg: #0F172A;
-  --border-color: #334155;
-  --shadow: 0 2px 12px rgba(0,0,0,0.3);
-  --stat-bg: #1E293B;
-
-  --badge-green-bg: #14532D;
-  --badge-green-text: #86EFAC;
-  --badge-blue-bg: #1E3A5F;
-  --badge-blue-text: #93C5FD;
-  --badge-yellow-bg: #713F12;
-  --badge-yellow-text: #FDE68A;
-  --badge-red-bg: #7F1D1D;
-  --badge-red-text: #FCA5A5;
-}
-
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Premium Utility Classes */
@@ -102,11 +72,6 @@ body {
   padding: 1.5rem;
   transition: all 0.2s ease;
   background-color: var(--stat-bg);
-}
-
-/* Smooth theme transition on all elements */
-*, *::before, *::after {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
 }
 
 /* Reset transition for animations that shouldn't be affected */

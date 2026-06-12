@@ -8,14 +8,14 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200"> {/* size-fix max-w-lg rounded-xl */}
-        <div className="flex justify-between items-center p-3 md:p-4 border-b border-gray-100 dark:border-slate-800"> {/* size-fix p-3 md:p-4 */}
+      <div className="bg-white rounded-xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200"> {/* size-fix max-w-lg rounded-xl */}
+        <div className="flex justify-between items-center p-3 md:p-4 border-b border-gray-100"> {/* size-fix p-3 md:p-4 */}
           <h2 className="text-lg font-bold">{title}</h2> {/* size-fix text-lg */}
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 dark:text-gray-100 transition-colors font-bold text-lg"> {/* size-fix text-lg */}
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors font-bold text-lg"> {/* size-fix text-lg */}
             ✕
           </button>
         </div>
-        <div className="p-3 md:p-4 overflow-y-auto bg-gray-50 dark:bg-slate-800/50 flex-1"> {/* size-fix */}
+        <div className="p-3 md:p-4 overflow-y-auto bg-gray-50 flex-1"> {/* size-fix */}
           {children}
         </div>
       </div>
@@ -89,32 +89,33 @@ const AIJobs = () => {
         
         {/* Dynamic Header */}
         <div className="flex flex-col space-y-1 mb-6"> {/* size-fix space-y-1 mb-6 */}
-          <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center tracking-tight"> {/* size-fix text-lg md:text-xl */}
+          <h1 className="text-lg md:text-xl font-bold flex items-center tracking-tight" style={{ color: "var(--text-primary)" }}> {/* size-fix text-lg md:text-xl */}
             <Search className="mr-2 text-blue-600 stroke-[3]" size={20} /> Target Jobs {/* size-fix mr-2 size 20 */}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-xs"> {/* size-fix text-xs */}
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}> {/* size-fix text-xs */}
             Discover roles globally matched against your explicit skillset, generating AI application coverage dynamically.
           </p>
         </div>
 
         {/* Action Panel */}
-        <div className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-lg shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col md:flex-row gap-3 items-stretch md:items-end"> {/* size-fix p-3 rounded-lg gap-3 */}
+        <div className="p-3 md:p-4 rounded-lg shadow-sm border flex flex-col md:flex-row gap-3 items-stretch md:items-end" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border-color)" }}>
           <div className="flex-1 w-full flex flex-col gap-1.5"> {/* size-fix gap-1.5 */}
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Matched Skills (Comma Separated)</label> {/* size-fix text-xs */}
+            <label className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>Matched Skills (Comma Separated)</label>
             <input 
               type="text" 
-              className="w-full px-3 py-2 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm" /* size-fix px-3 py-2 */
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" style={{ backgroundColor: "var(--input-bg)", color: "var(--text-primary)", borderColor: "var(--border-color)" }}
               value={skills}
               onChange={(e) => setSkills(e.target.value)}
               placeholder="e.g. React, Node.js, Python"
             />
           </div>
           <div className="w-full md:w-32 flex flex-col gap-1.5"> {/* size-fix gap-1.5 */}
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Limit Jobs</label> {/* size-fix text-xs */}
+            <label className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>Limit Jobs</label>
             <select 
               value={limit}
               onChange={(e) => setLimit(parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-slate-700 rounded-lg outline-none bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-100 text-sm" /* size-fix px-3 py-2 */
+              className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-100 text-sm"
+              style={{ backgroundColor: "var(--input-bg)", color: "var(--text-primary)", borderColor: "var(--border-color)" }}
             >
               <option value={1}>1 Job</option>
               <option value={2}>2 Jobs</option>
@@ -145,25 +146,25 @@ const AIJobs = () => {
         {/* Results List */}
         <div className="space-y-4 pt-4">
           {!loading && jobs.length === 0 && !error && (
-            <div className="text-center py-16 bg-transparent border-2 border-gray-100 dark:border-slate-800 border-dashed rounded-2xl flex flex-col items-center">
+            <div className="text-center py-16 bg-transparent border-2 border-dashed rounded-2xl flex flex-col items-center" style={{ borderColor: "var(--border-color)" }}>
               <Search className="text-gray-300 mb-4" size={48} />
-              <h3 className="text-gray-500 dark:text-gray-400 font-bold text-lg">No Active Prospects</h3>
-              <p className="text-gray-400 font-medium text-sm mt-1">Adjust limit or skills to search global entries.</p>
+              <h3 className="font-bold text-lg" style={{ color: "var(--text-secondary)" }}>No Active Prospects</h3>
+              <p className="font-medium text-sm mt-1" style={{ color: "var(--text-muted)" }}>Adjust limit or skills to search global entries.</p>
             </div>
           )}
 
           {jobs.map((job) => (
-            <div key={job.job_id} className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-[0_4px_24px_rgba(0,0,0,0.04)] transition-all flex flex-col lg:flex-row gap-4"> {/* size-fix p-4 rounded-lg gap-4 */}
+          <div key={job.job_id} className="p-4 rounded-lg shadow-sm border hover:shadow-[0_4px_24px_rgba(0,0,0,0.04)] transition-all flex flex-col lg:flex-row gap-4" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border-color)" }}>
               
               {/* Main Metadata Grouping */}
               <div className="flex-1">
-                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 group-hover:text-[#1740A6] transition-colors">{job.job_title}</h3> {/* size-fix text-base */}
+                <h3 className="text-base font-bold text-gray-900 group-hover:text-[#1740A6] transition-colors">{job.job_title}</h3> {/* size-fix text-base */}
                 
-                <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 gap-2 flex-wrap"> {/* size-fix text-xs mt-1 mb-4 gap-2 */}
-                  <span className="flex items-center bg-gray-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full border border-gray-100 dark:border-slate-800 font-medium text-gray-700 dark:text-gray-300"> {/* size-fix px-2 py-0.5 */}
+                <div className="flex items-center text-xs text-gray-500 mt-1 mb-4 gap-2 flex-wrap"> {/* size-fix text-xs mt-1 mb-4 gap-2 */}
+                  <span className="flex items-center bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 font-medium text-gray-700"> {/* size-fix px-2 py-0.5 */}
                     <Briefcase size={12} className="mr-1 text-blue-600" /> {job.employer_name || 'Hiring Team'} {/* size-fix size 12 */}
                   </span>
-                  <span className="flex items-center bg-gray-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full border border-gray-100 dark:border-slate-800 font-medium text-gray-700 dark:text-gray-300"> {/* size-fix px-2 py-0.5 */}
+                  <span className="flex items-center bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 font-medium text-gray-700"> {/* size-fix px-2 py-0.5 */}
                     <MapPin size={12} className="mr-1 text-blue-600" /> {job.job_is_remote ? 'Remote' : 'On-Site'} {/* size-fix size 12 */}
                   </span>
                   <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100/50 font-bold uppercase text-[9px] tracking-wide"> {/* size-fix px-2 text-[9px] */}
@@ -172,7 +173,7 @@ const AIJobs = () => {
                 </div>
 
                 {/* Score Grid Visualizations */}
-                <div className="bg-gray-50 dark:bg-slate-800/50/50 p-3 rounded-lg space-y-2 border border-gray-100 dark:border-slate-800"> {/* size-fix p-3 rounded-lg space-y-2 */}
+                <div className="p-3 rounded-lg space-y-2 border" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)" }}>
                   <div className="flex items-center justify-between pointer-events-none">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Match Accuracy</span> {/* size-fix text-[10px] */}
                     <span className={`text-xs font-extrabold ${job.matchPercentage >= 70 ? 'text-green-600' : 'text-blue-600'}`}> {/* size-fix text-xs */}
@@ -186,12 +187,12 @@ const AIJobs = () => {
 
                   <div className="flex flex-col gap-2 pt-2">
                     {job.matchedSkills?.length > 0 && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                      <p className="text-xs text-gray-600 font-medium">
                         <span className="text-green-600 font-bold mr-1">✓ Matched:</span> {job.matchedSkills.join(', ')}
                       </p>
                     )}
                     {job.missingSkills?.length > 0 && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                      <p className="text-xs text-gray-500 font-medium">
                         <span className="text-red-400 font-bold mr-1">✗ Missing:</span> {job.missingSkills.join(', ')}
                       </p>
                     )}
@@ -200,7 +201,7 @@ const AIJobs = () => {
               </div>
 
               {/* Action Sidebar */}
-              <div className="lg:w-40 flex flex-col justify-end gap-2 shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-slate-800 pt-3 lg:pt-0 lg:pl-4"> {/* size-fix w-40 gap-2 pt-3 pl-4 */}
+              <div className="lg:w-40 flex flex-col justify-end gap-2 shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100 pt-3 lg:pt-0 lg:pl-4"> {/* size-fix w-40 gap-2 pt-3 pl-4 */}
                 <button
                   onClick={() => openEmailViewer(job.applicationEmail, job.emailProvider)}
                   className="w-full flex items-center justify-center px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors border border-blue-100" /* size-fix px-3 py-2 rounded-lg */
@@ -217,7 +218,7 @@ const AIJobs = () => {
                     Direct Apply <ExternalLink size={12} className="ml-1 opacity-70" /> {/* size-fix size 12 */}
                   </a>
                 ) : (
-                  <button disabled className="w-full flex items-center justify-center px-3 py-2 bg-gray-100 text-gray-400 font-bold text-[10px] uppercase tracking-wider rounded-lg border border-gray-200 dark:border-slate-700 cursor-not-allowed"> {/* size-fix px-3 py-2 rounded-lg */}
+                  <button disabled className="w-full flex items-center justify-center px-3 py-2 font-bold text-[10px] uppercase tracking-wider rounded-lg border cursor-not-allowed" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-muted)" }}> {/* size-fix px-3 py-2 rounded-lg */}
                     No Direct Link
                   </button>
                 )}
@@ -232,7 +233,7 @@ const AIJobs = () => {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Application Draft Preview">
         <div className="space-y-4 flex flex-col h-full pointer-events-auto">
           <div className="flex items-center justify-between select-none">
-            <span className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex items-center">
+            <span className="text-xs font-semibold uppercase tracking-widest text-gray-500 flex items-center">
               Generated by:
               <span className={`ml-2 px-2 py-0.5 rounded text-white text-[10px] uppercase font-bold tracking-widest shadow-sm
                 ${selectedProvider === 'gemini' ? 'bg-purple-600' : 'bg-gray-500'}
@@ -242,13 +243,13 @@ const AIJobs = () => {
             </span>
             <button 
               onClick={copyToClipboard}
-              className={`flex items-center text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors border ${copied ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:bg-slate-800/50 hover:text-black'}`} /* size-fix px-3 py-1.5 text-[10px] */
+              className={`flex items-center text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors border ${copied ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:text-black'}`} /* size-fix px-3 py-1.5 text-[10px] */
             >
               {copied ? <Check size={12} className="mr-1.5" /> : <Copy size={12} className="mr-1.5 text-gray-400" />} {/* size-fix 14->12 */}
               {copied ? 'Copied to Clipboard' : 'Copy Content'}
             </button>
           </div>
-          <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-4 shadow-sm flex-1 whitespace-pre-wrap font-sans text-xs text-gray-800 dark:text-gray-200 leading-relaxed overflow-y-auto selection:bg-blue-100 selection:text-blue-900"> {/* size-fix rounded-lg p-3 text-xs */}
+          <div className="bg-white border border-gray-200 rounded-lg p-3 md:p-4 shadow-sm flex-1 whitespace-pre-wrap font-sans text-xs text-gray-800 leading-relaxed overflow-y-auto selection:bg-blue-100 selection:text-blue-900"> {/* size-fix rounded-lg p-3 text-xs */}
             {selectedEmail || "System Error: No email payload successfully evaluated."}
           </div>
         </div>

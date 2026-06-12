@@ -9,11 +9,26 @@ const ROLE_KEY = 'hireme_role';
 /** Returns the stored JWT token, or null */
 export const getToken = () => localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
 
-/** Returns the stored role ('admin' | 'guest'), or null */
-export const getRole = () => localStorage.getItem(ROLE_KEY) || sessionStorage.getItem(ROLE_KEY);
+/** Returns the stored role by decoding the JWT securely */
+export const getRole = () => {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const payloadStart = token.indexOf('.') + 1;
+    const payloadEnd = token.indexOf('.', payloadStart);
+    const base64Url = token.substring(payloadStart, payloadEnd);
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload).role;
+  } catch (e) {
+    return null;
+  }
+};
 
 /** Returns true if the current role is 'guest' */
-export const isGuest = () => (localStorage.getItem(ROLE_KEY) || sessionStorage.getItem(ROLE_KEY)) === 'guest';
+export const isGuest = () => getRole() === 'guest';
 
 /** Returns true if a token is present in either storage */
 export const isAuthed = () => Boolean(localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY));

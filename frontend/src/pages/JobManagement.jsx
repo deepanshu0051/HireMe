@@ -36,7 +36,7 @@ const JobManagement = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Job Postings</h1>
+             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Job Postings</h1>
              <p className="text-gray-500 font-medium font-sans">Control and analyze your open job requisitions across the platform.</p>
           </div>
           <Button onClick={handleCreate} className="h-10 px-4 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold text-sm flex items-center space-x-2 shadow-sm transition-all active:scale-95">
@@ -52,16 +52,16 @@ const JobManagement = () => {
               <input 
                type="text" 
                placeholder="Search by title, department or ID..." 
-               className="pl-10 pr-4 py-2 w-full bg-canvas border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/10 outline-none dark:text-white font-medium"
+               className="pl-10 pr-4 py-2 w-full bg-canvas border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/10 outline-none font-medium"
               />
            </div>
            
            <div className="flex items-center space-x-3">
-              <div className="flex bg-canvas dark:bg-gray-900 p-1 rounded-lg border border-border">
+              <div className="flex bg-canvas p-1 rounded-lg border border-border">
                  {["All", "Published", "Draft"].map(s => (
                    <button key={s} className={cn(
                      "px-4 py-1.5 rounded-md text-xs font-bold transition-all",
-                     s === "All" ? "bg-white dark:bg-gray-800 text-primary shadow-sm" : "text-gray-400"
+                     s === "All" ? "bg-white text-primary shadow-sm" : "text-gray-400"
                    )}>{s}</button>
                  ))}
               </div>
@@ -82,7 +82,7 @@ const JobManagement = () => {
                      <div className="p-8 flex-1 space-y-6">
                         <div className="flex items-start justify-between">
                            <div className="space-y-1.5">
-                              <h4 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors tracking-tight">{job.title}</h4>
+                              <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors tracking-tight">{job.title}</h4>
                               <div className="flex items-center space-x-6 text-[13px] font-medium text-gray-500">
                                  <span className="flex items-center"><MapPin size={14} className="mr-2 opacity-50" /> {job.location}</span>
                                  <span className="px-2 py-0.5 bg-canvas border border-border rounded text-[11px] uppercase tracking-wider font-bold">{job.type}</span>
@@ -99,7 +99,7 @@ const JobManagement = () => {
                         <div className="flex items-center space-x-10 pt-2">
                            <div className="flex items-center space-x-3">
                               <div className="flex -space-x-2">
-                                 {[1, 2, 3].map(i => <div key={i} className="h-7 w-7 rounded-full bg-primary-soft/20 border-2 border-white dark:border-gray-800" />)}
+                                 {[1, 2, 3].map(i => <div key={i} className="h-7 w-7 rounded-full bg-primary-soft/20 border-2 border-white" />)}
                               </div>
                               <span className="text-[13px] font-bold text-primary">{job.applicants || 0} applicants</span>
                            </div>

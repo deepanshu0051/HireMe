@@ -106,7 +106,7 @@ const JobDetails = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <Card className="border-none shadow-sm dark:bg-gray-800">
+            <Card className="border-none shadow-sm">
                <CardContent className="p-6 space-y-6">
                   <h3 className="font-bold text-lg mb-4">Role Overview</h3>
                   <div className="space-y-4">
@@ -139,7 +139,7 @@ const JobDetails = () => {
                </CardContent>
             </Card>
 
-            <Card className="border-none shadow-sm dark:bg-gray-800">
+            <Card className="border-none shadow-sm">
                <CardContent className="p-6">
                   <h3 className="font-bold text-lg mb-4">About Dropbox</h3>
                   <div className="space-y-4">

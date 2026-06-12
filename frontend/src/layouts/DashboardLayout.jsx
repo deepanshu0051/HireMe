@@ -142,7 +142,7 @@ const DashboardLayout = ({ children }) => {
       )}>
         <div className="p-4 flex items-center justify-between text-white"> {/* size-fix: p-6 -> p-4 */}
           <div className="flex items-center space-x-2"> {/* size-fix: space-x-3 -> space-x-2 */}
-            <div className="bg-white dark:bg-slate-800/20 p-1.5 rounded-lg">
+            <div className="bg-white p-1.5 rounded-lg">
               <Briefcase size={20} className="text-white" /> {/* size-fix logo */}
             </div>
             <span className="text-lg font-bold tracking-tight">HireMe</span> {/* size-fix: text-xl -> text-lg */}
@@ -167,7 +167,7 @@ const DashboardLayout = ({ children }) => {
                   "flex items-center space-x-2 px-3 py-2 rounded-lg transition-all font-medium text-sm", /* size-fix: px-4 py-3 space-x-3 -> px-3 py-2 space-x-2 */
                   isActive 
                     ? "bg-[#2251C5] text-white" 
-                    : "hover:text-white hover:bg-white dark:bg-slate-800/5"
+                    : "hover:text-white hover:bg-white"
                 )}
               >
                 <Icon size={16} /> {/* size-fix: size=18 -> 16 */}
@@ -181,7 +181,7 @@ const DashboardLayout = ({ children }) => {
         <div className="p-4 border-t border-white/10 space-y-3 relative">
           
           {isScheduleOpen && (
-            <div className="absolute bottom-full left-4 bg-white dark:bg-slate-800 shadow-2xl rounded-xl p-4 w-[280px] mb-2 z-50 border border-slate-200">
+            <div className="absolute bottom-full left-4 bg-white shadow-2xl rounded-xl p-4 w-[280px] mb-2 z-50 border border-slate-200">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-bold text-slate-800 text-sm">Set Auto-Send Schedule</h3>
                 <button onClick={() => setIsScheduleOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -268,12 +268,12 @@ const DashboardLayout = ({ children }) => {
           <div className="flex items-center space-x-2"> {/* size-fix space-x-2 */}
             <button 
               onClick={() => setIsSidebarOpen(true)} 
-              className="p-1 hover:bg-white dark:bg-slate-800/10 rounded-md transition-colors"
+              className="p-1 hover:bg-white rounded-md transition-colors"
               aria-label="Open navigation menu"
             >
               <Menu size={20} /> {/* size-fix */}
             </button>
-            <div className="bg-white dark:bg-slate-800/20 p-1 rounded-lg"> {/* size-fix p-1.5->p-1 */}
+            <div className="bg-white p-1 rounded-lg"> {/* size-fix p-1.5->p-1 */}
               <Briefcase size={16} className="text-white" /> {/* size-fix size 18->16 */}
             </div>
             <span className="text-base font-bold tracking-tight">HireMe</span> {/* size-fix text-lg->base */}

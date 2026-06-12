@@ -10,17 +10,17 @@ const PostJob = () => {
     <DashboardLayout role="employer">
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
-          <h2 className="text-2xl font-bold dark:text-white">Post a New Job</h2>
+          <h2 className="text-2xl font-bold">Post a New Job</h2>
           <p className="text-gray-500">Fill in the details to find your next great hire.</p>
         </div>
 
-        <Card className="border-none shadow-sm dark:bg-gray-800">
+        <Card className="border-none shadow-sm">
           <CardContent className="p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input label="Job Title" placeholder="e.g. Senior Product Designer" />
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-1">Job Type</label>
-                <select className="w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-700 dark:border-gray-600 px-4 py-2 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all dark:text-white">
+                <label className="text-sm font-medium text-gray-700 ml-1">Job Type</label>
+                <select className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all">
                   <option>Full-time</option>
                   <option>Part-time</option>
                   <option>Contract</option>
@@ -35,9 +35,9 @@ const PostJob = () => {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-1">Job Description</label>
+              <label className="text-sm font-medium text-gray-700 ml-1">Job Description</label>
               <textarea 
-                className="w-full h-40 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600 p-4 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all dark:text-white"
+                className="w-full h-40 rounded-xl border border-gray-200 p-4 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all"
                 placeholder="Describe the role, responsibilities, and requirements..."
               ></textarea>
             </div>

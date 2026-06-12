@@ -91,14 +91,32 @@ const AdminDashboard = () => {
   const [maxWeekVal, setMaxWeekVal] = useState(isGuest() ? 5 : 0);
   const [loading, setLoading] = useState(!isGuest()); // Loading state for admins
   const [error, setError] = useState(null);
+  const [userName, setUserName] = useState("User");
 
   const [currentTime, setCurrentTime] = useState("");
 
   useEffect(() => {
     if (isGuest()) {
       setCurrentTime("(Demo) Thursday, 11 June 2026 | 14:32:05");
+      setUserName("Demo User");
       return;
     }
+
+    // Fetch Profile for real name
+    const fetchProfile = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+        const token = localStorage.getItem("hireme_token");
+        const res = await fetch(`${baseUrl}/api/profile`, { headers: { "Authorization": `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data.fullName) {
+             setUserName(data.data.fullName.split(" ")[0]); // Use first name
+          }
+        }
+      } catch (e) { console.error("Profile fetch error", e); }
+    };
+    fetchProfile();
 
     const interval = setInterval(() => {
       const now = new Date();
@@ -317,7 +335,7 @@ const AdminDashboard = () => {
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}> {/* size-fix */}
-            Good morning, {isGuest() ? "Demo User" : "Deepanshu"} 👋
+            Good morning, {userName} 👋
           </h1>
           <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
             {stats.sentToday} emails sent today &nbsp;·&nbsp; {currentTime || "Loading time..."}
@@ -329,7 +347,7 @@ const AdminDashboard = () => {
             <div className="w-[150px] h-2 rounded-full" style={{ backgroundColor: "#DBEAFE" }}> {/* size-fix */}
               <div
                 className="h-full rounded-full transition-all"
-                style={{ width: "60%", backgroundColor: "#2563EB" }}
+                style={{ width: `${Math.min((stats.sentToday / 5) * 100, 100)}%`, backgroundColor: "#2563EB" }}
               />
             </div>
             <span className="text-xs font-bold" style={{ color: "#2563EB" }}>{Math.min(stats.sentToday, 5)} / 5</span>

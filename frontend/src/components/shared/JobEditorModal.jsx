@@ -39,20 +39,20 @@ const JobEditorModal = ({ isOpen, onClose, job }) => {
            initial={{ scale: 0.95, opacity: 0, y: 20 }}
            animate={{ scale: 1, opacity: 1, y: 0 }}
            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-           className="relative bg-white dark:bg-gray-800 w-full max-w-4xl max-h-[90vh] rounded-[2rem] shadow-2xl flex flex-col overflow-hidden border border-white dark:border-gray-700"
+           className="relative bg-white w-full max-w-4xl max-h-[90vh] rounded-[2rem] shadow-2xl flex flex-col overflow-hidden border border-white"
         >
            {/* Header */}
-           <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30">
+           <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <div className="flex items-center space-x-4">
-                 <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200 dark:shadow-none">
+                 <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
                     <Briefcase size={24} />
                  </div>
                  <div>
-                    <h2 className="text-2xl font-black dark:text-white">{job ? "Edit Job Posting" : "New Job Opportunity"}</h2>
+                    <h2 className="text-2xl font-black">{job ? "Edit Job Posting" : "New Job Opportunity"}</h2>
                     <p className="text-sm text-gray-500 font-medium">Define the roles and responsibilities for your next hire.</p>
                  </div>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                  <X size={24} className="text-gray-400" />
               </button>
            </div>
@@ -74,7 +74,7 @@ const JobEditorModal = ({ isOpen, onClose, job }) => {
                        <select 
                          value={formData.type}
                          onChange={(e) => setFormData({...formData, type: e.target.value})}
-                         className="w-full rounded-2xl border border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 px-4 py-3 text-sm focus:ring-4 focus:ring-blue-100 outline-none transition-all dark:text-white font-medium"
+                         className="w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm focus:ring-4 focus:ring-blue-100 outline-none transition-all font-medium"
                        >
                           <option>Full-time</option>
                           <option>Contract</option>
@@ -108,7 +108,7 @@ const JobEditorModal = ({ isOpen, onClose, job }) => {
                     <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Job Description</label>
                     <textarea 
                       rows={6}
-                      className="w-full rounded-2xl border border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 p-6 text-sm focus:ring-4 focus:ring-blue-100 outline-none transition-all dark:text-white font-medium"
+                      className="w-full rounded-2xl border border-gray-100 bg-gray-50 p-6 text-sm focus:ring-4 focus:ring-blue-100 outline-none transition-all font-medium"
                       placeholder="Describe the mission, requirements, and benefits..."
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
@@ -116,13 +116,13 @@ const JobEditorModal = ({ isOpen, onClose, job }) => {
                  </div>
 
                  {/* Status & Options */}
-                 <div className="flex items-center justify-between p-6 rounded-3xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-900/30">
+                 <div className="flex items-center justify-between p-6 rounded-3xl bg-blue-50/50 border border-blue-100/50">
                     <div className="flex items-center space-x-4">
-                       <div className="p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm text-blue-600">
+                       <div className="p-3 bg-white rounded-xl shadow-sm text-blue-600">
                           <Globe size={24} />
                        </div>
                        <div>
-                          <p className="text-sm font-bold dark:text-white">Publish to Public Board</p>
+                          <p className="text-sm font-bold">Publish to Public Board</p>
                           <p className="text-xs text-gray-500">Make this job visible to everyone.</p>
                        </div>
                     </div>
@@ -131,7 +131,7 @@ const JobEditorModal = ({ isOpen, onClose, job }) => {
                       onClick={() => setFormData({...formData, status: formData.status === "Published" ? "Draft" : "Published"})}
                       className={cn(
                         "w-12 h-6 rounded-full transition-all duration-300 relative",
-                        formData.status === "Published" ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                        formData.status === "Published" ? "bg-blue-600" : "bg-gray-300"
                       )}
                     >
                        <div className={cn(
@@ -144,11 +144,11 @@ const JobEditorModal = ({ isOpen, onClose, job }) => {
            </div>
 
            {/* Footer */}
-           <div className="p-8 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30">
+           <div className="p-8 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
               <Button variant="ghost" className="text-gray-400 font-bold">Discard Changes</Button>
               <div className="flex items-center space-x-3">
                  <Button variant="outline" className="px-6 rounded-xl border-gray-200">Preview</Button>
-                 <Button type="submit" form="job-form" className="px-10 rounded-xl bg-blue-600 shadow-lg shadow-blue-200 dark:shadow-none">Save & Publish</Button>
+                 <Button type="submit" form="job-form" className="px-10 rounded-xl bg-blue-600 shadow-lg shadow-blue-200">Save & Publish</Button>
               </div>
            </div>
         </motion.div>

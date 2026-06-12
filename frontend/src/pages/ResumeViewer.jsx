@@ -6,6 +6,7 @@ import {
   Eye
 } from "lucide-react";
 import { DashboardLayout } from "../layouts/DashboardLayout";
+import { useNavigate } from "react-router-dom";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -15,6 +16,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 const ResumeViewer = () => {
+  const navigate = useNavigate();
   // ── Resume state — single source of truth from MongoDB ──────────────────
   // resumeData shape: { url, publicId, filename, uploadedAt } | null
   const [resumeData, setResumeData] = useState(null);
@@ -291,19 +293,20 @@ const ResumeViewer = () => {
         {!resumeData ? (
           /* ── UPLOAD AREA (no resume yet) ──────────────────────────── */
           <div className="space-y-4">
-            <h1 className="text-lg md:text-xl font-bold text-[#0F172A]">My Resume</h1>
+            <h1 className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}>My Resume</h1>
             <div
-              className={`w-full h-[200px] md:h-[240px] bg-[#F8FAFC] border-2 border-dashed border-[#BFDBFE] rounded-lg flex flex-col items-center justify-center p-6 transition-all group ${getRole() === "admin" ? "cursor-pointer hover:bg-[#F1F5F9]" : "opacity-60 cursor-not-allowed"}`}
+              className={`w-full h-[200px] md:h-[240px] border-2 border-dashed border-[#BFDBFE] rounded-lg flex flex-col items-center justify-center p-6 transition-all group ${getRole() === "admin" ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
+              style={{ backgroundColor: "var(--bg-secondary)" }}
               onClick={() => getRole() === "admin" && !isUploading && fileInputRef.current.click()}
             >
-              <div className="bg-white dark:bg-slate-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
+              <div className="p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform" style={{ backgroundColor: "var(--card-bg)" }}>
                 {isUploading
                   ? <Loader2 size={24} className="text-[#2563EB] animate-spin" />
                   : <Upload size={24} className="text-[#2563EB]" />
                 }
               </div>
-              <h2 className="text-base font-bold text-[#0F172A]">Upload Your Resume</h2>
-              <p className="text-[#64748B] text-xs mt-2 text-center max-w-sm">
+              <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Upload Your Resume</h2>
+              <p className="text-xs mt-2 text-center max-w-sm" style={{ color: "var(--text-secondary)" }}>
                 Supports strictly PDF format. Your resume will be used to auto-generate
                 personalized job application emails and submit directly to companies.
               </p>
@@ -332,7 +335,7 @@ const ResumeViewer = () => {
           /* ── RESUME PREVIEW AREA ──────────────────────────────────── */
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h1 className="text-lg md:text-xl font-bold text-[#0F172A]">Resume Preview</h1>
+              <h1 className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}>Resume Preview</h1>
               <div className="flex items-center space-x-2">
                 {/* Preview — opens full-screen Google Docs Viewer modal */}
                 <button
@@ -385,13 +388,13 @@ const ResumeViewer = () => {
             </div>
 
             {/* File info card */}
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 flex items-center justify-between">
+            <div className="rounded-xl p-4 flex items-center justify-between border" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)" }}>
               <div className="flex items-center space-x-3">
                 <div className="p-2 rounded-lg bg-red-50 text-red-600">
                   <FileText size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-[#0F172A] max-w-[300px] truncate">
+                  <p className="text-sm font-bold max-w-[300px] truncate" style={{ color: "var(--text-primary)" }}>
                     {resumeData.filename}
                   </p>
                   <div className="flex items-center space-x-2 mt-0.5">
@@ -414,7 +417,7 @@ const ResumeViewer = () => {
                 Google Docs Viewer fetches & renders the PDF server-side,
                 returning safe HTML that embeds cleanly in the iframe.
             ────────────────────────────────────────────────────────────── */}
-            <div className="border border-[#E2E8F0] rounded-xl overflow-hidden shadow-sm bg-[#F1F5F9]">
+            <div className="rounded-xl overflow-hidden shadow-sm border" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)" }}>
               {googleDocsUrl ? (
                 <iframe
                   key={resumeData.url}  /* force re-render when URL changes */
@@ -433,23 +436,23 @@ const ResumeViewer = () => {
         )}
 
         {/* ── AI EMAIL GENERATOR SECTION ─────────────────────────────── */}
-        <div className="pt-6 border-t border-[#E2E8F0]">
+        <div className="pt-6 border-t" style={{ borderColor: "var(--border-color)" }}>
           <div className="flex items-center space-x-2 mb-4">
             <Sparkles className="text-[#2563EB]" size={18} />
-            <h2 className="text-base md:text-lg font-bold text-[#0F172A]">AI-Powered Email Generator</h2>
+            <h2 className="text-base md:text-lg font-bold" style={{ color: "var(--text-primary)" }}>AI-Powered Email Generator</h2>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 border border-[#BFDBFE] rounded-lg p-4 md:p-6 shadow-sm space-y-4">
+          <div className="rounded-lg p-4 md:p-6 shadow-sm space-y-4 border" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border-color)" }}>
             <div>
-              <h3 className="text-sm font-bold text-[#0F172A]">Generate Job Application Email</h3>
-              <p className="text-xs text-[#64748B] mt-1">
+              <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Generate Job Application Email</h3>
+              <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
                 AI will read your resume skills and create a personalized email for job applications.
               </p>
             </div>
 
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#0F172A]">Enter job role</label>
+                <label className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Enter job role</label>
                 <input
                   type="text"
                   placeholder="e.g. React Developer, MERN Stack..."
@@ -464,8 +467,8 @@ const ResumeViewer = () => {
                     if (!val) setJobRoleError("Please enter a job role to generate email");
                     else if (val.length < 2) setJobRoleError("Job role must be at least 2 characters");
                   }}
-                  className="w-full bg-[#F8FAFC] border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#2563EB] outline-none transition-all"
-                  style={{ borderColor: jobRoleError ? "#EF4444" : "#E2E8F0" }}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#2563EB] outline-none transition-all"
+                  style={{ backgroundColor: "var(--input-bg)", color: "var(--text-primary)", borderColor: jobRoleError ? "#EF4444" : "var(--border-color)" }}
                 />
                 {jobRoleError && (
                   <p className="text-[#EF4444] text-[11px] font-semibold mt-1">{jobRoleError}</p>
@@ -493,14 +496,14 @@ const ResumeViewer = () => {
 
             {generatedEmail && (
               <div className="animate-fade-in space-y-4">
-                <div className="bg-[#F0F7FF] border border-[#BFDBFE] rounded-xl p-6 space-y-4">
-                  <div className="pb-3 border-b border-[#BFDBFE]">
+                <div className="rounded-xl p-6 space-y-4 border" style={{ backgroundColor: "var(--stat-bg)", borderColor: "var(--stat-border)" }}>
+                  <div className="pb-3 border-b" style={{ borderColor: "var(--stat-border)" }}>
                     <p className="text-[10px] uppercase font-bold text-[#3B82F6] mb-1">Subject</p>
-                    <p className="text-sm font-bold text-[#1E3A5F]">{generatedEmail.subject}</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{generatedEmail.subject}</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-[#3B82F6] mb-1">Body</p>
-                    <p className="text-sm text-[#1E3A5F] leading-relaxed whitespace-pre-wrap">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-primary)" }}>
                       {generatedEmail.body}
                     </p>
                   </div>
@@ -509,15 +512,17 @@ const ResumeViewer = () => {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={copyToClipboard}
-                    className="flex-1 border border-[#BFDBFE] bg-white dark:bg-slate-800 text-[#0F172A] py-2.5 rounded-lg text-xs font-bold hover:bg-[#F8FAFC] transition-all flex items-center justify-center space-x-2"
+                    className="flex-1 border py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-2"
+                    style={{ borderColor: "var(--border-color)", backgroundColor: "var(--card-bg)", color: "var(--text-primary)" }}
                   >
                     {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
                     <span>{copied ? "Copied!" : "Copy Email"}</span>
                   </button>
                   <button
+                    onClick={() => navigate('/emails')}
                     className="flex-[2] bg-[#2563EB] text-white py-2.5 rounded-lg text-xs font-bold hover:bg-[#1d4ed8] transition-all"
                   >
-                    Use this Email
+                    Go to Mails
                   </button>
                 </div>
               </div>
@@ -537,20 +542,22 @@ const ResumeViewer = () => {
             <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px]"></div>
 
             <div
-              className="relative w-[92vw] max-w-5xl h-[90vh] bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col pointer-events-auto"
+              className="relative w-[92vw] max-w-5xl h-[90vh] rounded-2xl shadow-xl overflow-hidden flex flex-col pointer-events-auto"
+              style={{ backgroundColor: "var(--card-bg)" }}
             >
               {/* Modal header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#E2E8F0] bg-white dark:bg-slate-800 shrink-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: "var(--border-color)", backgroundColor: "var(--card-bg)" }}>
                 <div className="flex items-center space-x-2">
                   <FileText size={18} className="text-red-500" />
-                  <span className="text-sm font-bold text-[#0F172A] truncate max-w-[200px] md:max-w-sm">
+                  <span className="text-sm font-bold truncate max-w-[200px] md:max-w-sm" style={{ color: "var(--text-primary)" }}>
                     {resumeData?.filename}
                   </span>
                 </div>
                 {/* X button — closes modal only, does NOT delete */}
                 <button
                   onClick={() => setShowModal(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] transition-all"
+                  className="w-8 h-8 flex items-center justify-center rounded-full transition-all"
+                  style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)" }}
                   aria-label="Close preview"
                 >
                   <X size={18} />
@@ -558,7 +565,7 @@ const ResumeViewer = () => {
               </div>
 
               {/* Modal iframe — same Google Docs Viewer URL */}
-              <div className="flex-1 bg-[#F8FAFC]">
+              <div className="flex-1" style={{ backgroundColor: "var(--bg-secondary)" }}>
                 <iframe
                   key={`modal-${resumeData?.url}`}
                   src={googleDocsUrl}
@@ -573,7 +580,7 @@ const ResumeViewer = () => {
         {/* ── DELETE CONFIRMATION MODAL ───────────────────────────────── */}
         {showDeleteModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/50 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 max-w-sm w-full shadow-2xl animate-scale-in">
+            <div className="rounded-xl p-4 md:p-5 max-w-sm w-full shadow-2xl animate-scale-in" style={{ backgroundColor: "var(--card-bg)" }}>
               <div className="flex justify-between items-start mb-3">
                 <div className="bg-red-50 p-2 rounded-full">
                   <Trash2 size={20} className="text-red-600" />
@@ -582,8 +589,8 @@ const ResumeViewer = () => {
                   <X size={18} />
                 </button>
               </div>
-              <h3 className="text-sm md:text-base font-bold text-[#0F172A]">Delete resume?</h3>
-              <p className="text-xs md:text-sm text-[#64748B] mt-1.5 leading-relaxed">
+              <h3 className="text-sm md:text-base font-bold" style={{ color: "var(--text-primary)" }}>Delete resume?</h3>
+              <p className="text-xs md:text-sm mt-1.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                 Are you sure you want to delete your resume? This action cannot be undone.
                 {getRole() === "admin" && (
                   <span className="block mt-1 text-amber-600 font-semibold">
@@ -595,7 +602,7 @@ const ResumeViewer = () => {
                 <button
                   onClick={() => setShowDeleteModal(false)}
                   disabled={isDeleting}
-                  className="flex-1 bg-[#F1F5F9] text-[#64748B] py-2 rounded-lg text-sm font-bold hover:bg-[#E2E8F0] transition-all disabled:opacity-50"
+                  className="flex-1 border py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50 hover:opacity-90" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-color)", color: "var(--text-secondary)" }}
                 >
                   Cancel
                 </button>
@@ -617,7 +624,7 @@ const ResumeViewer = () => {
         {/* ── TOAST ───────────────────────────────────────────────────── */}
         {toastMessage && (
           <div
-            className="fixed bottom-8 right-8 z-[200] flex items-center space-x-3 rounded-xl shadow-xl px-5 py-4 max-w-xs animate-slide-in-right bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700"
+            className="fixed bottom-8 right-8 z-[200] flex items-center space-x-3 rounded-xl shadow-xl px-5 py-4 max-w-xs animate-slide-in-right bg-white border border-[#E2E8F0]"
             style={{
               borderLeft: `4px solid ${
                 toastType === "success" ? "#10B981"
@@ -629,7 +636,7 @@ const ResumeViewer = () => {
             {toastType === "success" && <Check size={18} className="text-[#10B981] shrink-0" />}
             {toastType === "warning" && <span className="text-[#F59E0B] shrink-0 font-bold">!</span>}
             {toastType === "error"   && <X    size={18} className="text-[#EF4444] shrink-0" />}
-            <p className="text-sm font-semibold flex-1 text-[#0F172A]">{toastMessage}</p>
+            <p className="text-sm font-semibold flex-1" style={{ color: "var(--text-primary)" }}>{toastMessage}</p>
             <button onClick={() => setToastMessage(null)} className="text-[#94A3B8] hover:text-[#64748B]">
               <X size={14} />
             </button>

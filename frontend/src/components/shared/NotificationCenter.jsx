@@ -15,16 +15,16 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-full right-0 mt-4 w-96 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-[100] animate-fade-in">
-      <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30">
-         <h3 className="font-black text-sm uppercase tracking-widest text-gray-900 dark:text-white">Recent Alerts</h3>
+    <div className="absolute top-full right-0 mt-4 w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-[100] animate-fade-in">
+      <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+         <h3 className="font-black text-sm uppercase tracking-widest text-gray-900">Recent Alerts</h3>
          <button className="text-xs font-bold text-blue-600 hover:underline">Mark all as read</button>
       </div>
       <div className="max-h-[400px] overflow-y-auto">
          {notifications.map((n) => (
            <div key={n.id} className={cn(
-             "p-6 flex items-start space-x-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer",
-             !n.read && "bg-blue-50/20 dark:bg-blue-900/10"
+             "p-6 flex items-start space-x-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer",
+             !n.read && "bg-blue-50/20"
            )}>
               <div className={cn(
                 "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
@@ -36,7 +36,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
               </div>
               <div className="space-y-1">
                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-black dark:text-white">{n.title}</p>
+                    <p className="text-sm font-black">{n.title}</p>
                     <span className="text-[10px] font-bold text-gray-400 uppercase">{n.time}</span>
                  </div>
                  <p className="text-xs text-gray-500 leading-relaxed">{n.text}</p>
