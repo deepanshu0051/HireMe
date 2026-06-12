@@ -126,7 +126,7 @@ const Settings = () => {
 
   // Signature
   const [signature, setSignature] = useState(
-    isGuest() ? guestData.emailSignature : `Best regards,\nDeepanshu\nFull Stack Developer\n📞 +91 9560287251\n🔗 linkedin.com/in/deepanshu-bhati\n💻 github.com/deepanshu0051`
+    isGuest() ? guestData.emailSignature : `Best regards,\nJohn Doe\nFull Stack Developer\n📞 +1 234567890\n🔗 linkedin.com/in/your-profile\n💻 github.com/your-username`
   );
   const [sigError, setSigError] = useState("");
 

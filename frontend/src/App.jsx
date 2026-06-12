@@ -6,14 +6,9 @@ import AccessGate from "./pages/AccessGate";
 import AdminDashboard from "./pages/AdminDashboard";
 import Emails from "./pages/Emails";
 import Profile from "./pages/Profile";
-import JobManagement from "./pages/JobManagement";
-import JobDetails from "./pages/JobDetails";
-import ApplicantManagement from "./pages/ApplicantManagement";
 import ResumeViewer from "./pages/ResumeViewer";
 import Settings from "./pages/Settings";
-import AIJobs from "./pages/AIJobs";
 
-/**
 /**
  * AUTH FLOW:
  * - No token in localStorage → all "protected" routes redirect exclusively to /access
@@ -57,12 +52,8 @@ function App() {
         <Route path="/" element={<ProtectedRoute element={<AdminDashboard />} />} />
         <Route path="/emails" element={<ProtectedRoute element={<Emails />} />} />
         <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
-        <Route path="/jobs" element={<ProtectedRoute element={<JobManagement />} />} />
-        <Route path="/jobs/:id" element={<ProtectedRoute element={<JobDetails />} />} />
-        <Route path="/applicants" element={<ProtectedRoute element={<ApplicantManagement />} />} />
         <Route path="/resume" element={<ProtectedRoute element={<ResumeViewer />} />} />
         <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
-        <Route path="/ai-jobs" element={<ProtectedRoute element={<AIJobs />} />} />
         <Route path="/analytics" element={<ProtectedRoute element={<AdminDashboard />} />} />
 
         {/* Catch-all: redirect to access gate */}

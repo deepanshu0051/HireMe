@@ -40,7 +40,6 @@ const DashboardLayout = ({ children }) => {
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Mails", href: "/emails", icon: Mail },
     { name: "Resume", href: "/resume", icon: FileText },
-    { name: "Jobs", href: "/ai-jobs", icon: Search },
     { name: "Profile", href: "/profile", icon: User },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
