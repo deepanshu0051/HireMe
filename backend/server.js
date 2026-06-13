@@ -69,7 +69,7 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
       frameSrc: ["'self'", "https://res.cloudinary.com"],
-      connectSrc: ["'self'", "https://res.cloudinary.com", "http://localhost:*"],
+      connectSrc: ["'self'", "https://res.cloudinary.com", "http://localhost:*", "https://hireme-oeyp.onrender.com", "https://hireme-ai.netlify.app"],
     }
   }
 }));
