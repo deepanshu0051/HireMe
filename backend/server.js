@@ -74,19 +74,9 @@ app.use(helmet({
   }
 }));
 
-// CORS — allow Vite dev origin + optional FRONTEND_URL from .env
-const allowedOrigins = ['http://localhost:5173'];
-if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
-
+// CORS configuration
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow server-to-server requests (no origin) and explicitly allowed origins
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS policy: Origin ${origin} is not allowed.`));
-    }
-  },
+  origin: true,
   credentials: true,
 }));
 
