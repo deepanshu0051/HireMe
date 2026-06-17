@@ -112,4 +112,3 @@ npm run dev
 3. Deploy from the `backend/` directory, start command: `node server.js` ### Frontend (Vercel / Netlify)
 1. Set `VITE_API_BASE_URL=https://your-backend-url.com`
 2. Build command: `npm run build`
-3. Publish directory: `dist` --- ## Author **Deepanshu Bhati** Full Stack Developer +91 9560287251 --- ## License This project is for **personal use only**. Not licensed for redistribution.
