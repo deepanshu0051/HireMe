@@ -13,6 +13,7 @@ console.log(`GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? 'YES' : 'NO'}`);
 console.log(`JWT_SECRET: ${process.env.JWT_SECRET ? 'YES' : 'NO'}`);
 console.log(`ADMIN_ACCESS_PASSWORD: ${process.env.ADMIN_ACCESS_PASSWORD ? 'YES' : 'NO'}`);
 console.log(`ADMIN_SECRET_KEY: ${process.env.ADMIN_SECRET_KEY ? 'YES' : 'NO'}`);
+console.log(`CRON_SECRET: ${process.env.CRON_SECRET ? 'YES' : 'NO (external cron trigger disabled!)'}`);
 
 if (!process.env.RAPIDAPI_KEY || !process.env.RAPIDAPI_HOST) {
   console.warn('⚠️ WARNING: RAPIDAPI_KEY or RAPIDAPI_HOST is missing from your .env file! API requests will fail.');
@@ -44,6 +45,7 @@ const authRoutes = require('./routes/authRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const cronRoutes = require('./routes/cronRoutes');
 
 // Auth Middleware
 const { requireAuth, requireAdmin } = require('./middleware/authMiddleware');
@@ -125,6 +127,14 @@ app.use(hpp());
 //  2. Routes
 // ─────────────────────────────────────────
 
+// ─── Health / Keep-Alive endpoint ────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        timestamp: new Date()
+    });
+});
+
 // ─── Public: no token required ───────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 
@@ -142,7 +152,10 @@ app.use('/api/emails', requireAuth, requireAdmin, emailLogRoutes);
 app.use('/api/companies', requireAuth, requireAdmin, companyRoutes);
 app.use('/api/settings', requireAuth, requireAdmin, settingsRoutes);
 
-// Basic health-check route
+// ─── External Cron Trigger — no JWT required, secured via X-Cron-Secret header
+app.use('/api/cron', cronRoutes);
+
+// Basic root route
 app.get('/', (req, res) => {
   res.send('HireMe Backend Running');
 });
