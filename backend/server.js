@@ -89,6 +89,9 @@ const globalRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests. Please try again later.' },
+  skip: (req) => {
+    return req.path.startsWith('/api/cron') || req.path.startsWith('/api/health');
+  }
 });
 app.use(globalRateLimiter);
 
@@ -129,10 +132,7 @@ app.use(hpp());
 
 // ─── Health / Keep-Alive endpoint ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-    res.status(200).json({
-        status: "ok",
-        timestamp: new Date()
-    });
+    res.status(200).send("OK");
 });
 
 // ─── Public: no token required ───────────────────────────────────────────────
