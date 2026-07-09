@@ -72,9 +72,17 @@ const sendPendingEmails = async () => {
     // 3. Process Batch
     for (const company of pendingCompanies) {
       try {
+        // Guard: skip companies with no HR email
+        if (!company.hrEmail) {
+          console.log(`[CronController] ⟳ Skipping ${company.companyName} — hrEmail is null.`);
+          company.status = 'Skipped';
+          await company.save();
+          continue;
+        }
+
         // A. Generate AI Content
         const aiResult = await generateApplicationEmail(
-          company.jobRole || 'Software Developer',
+          company.jobTitle || 'Software Developer',
           company.companyName,
           adminProfile ? adminProfile.skills : [],
           {
@@ -104,7 +112,7 @@ const sendPendingEmails = async () => {
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
           to: company.hrEmail,
-          subject: `Job Application — ${company.jobRole} Position`,
+          subject: `Job Application — ${company.jobTitle} Position`,
           text: finalBody,
           attachments: attachments.length > 0 ? attachments : undefined
         });
@@ -112,7 +120,7 @@ const sendPendingEmails = async () => {
         const sentAt = new Date();
         const emailLog = new EmailLog({
           company: company._id,
-          subject: `Job Application — ${company.jobRole} Position`,
+          subject: `Job Application — ${company.jobTitle} Position`,
           body: finalBody,
           status: 'Sent',
           sentAt,

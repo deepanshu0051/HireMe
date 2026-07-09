@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { sendPendingEmails } = require('../controllers/cronController');
+const { syncJobsToCompanies } = require('../controllers/jobController');
+const Profile = require('../models/Profile');
 
 /**
  * POST /api/cron/trigger
@@ -40,6 +42,18 @@ router.post('/trigger', async (req, res) => {
   console.log(`[CRON] External trigger received at ${timestamp} IST`);
 
   try {
+    // Fetch profile and extract skills
+    let userSkills = [];
+    const profile = await Profile.findOne({});
+    if (profile && profile.skills) {
+      userSkills = profile.skills;
+    }
+
+    // 3A. Fetch jobs from JSearch and ingest into MongoDB ('companies' collection)
+    const newJobsCount = await syncJobsToCompanies(userSkills);
+    console.log(`[CRON] Ingested ${newJobsCount} new jobs.`);
+
+    // 3B. Send emails to pending companies
     const summary = await sendPendingEmails();
 
     console.log(
@@ -51,6 +65,7 @@ router.post('/trigger', async (req, res) => {
       message: 'Cron job executed successfully.',
       timestamp,
       result: {
+        newJobsIngested: newJobsCount,
         emailsSent: summary.emailsSent,
         errors: summary.errors,
       },

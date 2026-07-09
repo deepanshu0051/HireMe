@@ -1,5 +1,6 @@
 const { fetchJobsFromJSearch } = require('../config/jsearch');
 const { calculateSkillMatch } = require('../utils/skillMatcher');
+const Company = require('../models/Company');
 
 /**
  * Fetches fresher React developer jobs from JSearch API,
@@ -69,6 +70,9 @@ const fetchAndFilterJobs = async (userSkills = []) => {
           job_is_remote:       job.job_is_remote,
           job_posted_at:       job.job_posted_at,
           job_employment_type: job.job_employment_type,
+          job_city:            job.job_city,
+          job_state:           job.job_state,
+          job_country:         job.job_country,
           // Skill match results
           matchPercentage:     matchResult.matchPercentage,
           matchedSkills:       matchResult.matchedSkills,
@@ -89,4 +93,73 @@ const fetchAndFilterJobs = async (userSkills = []) => {
   }
 };
 
-module.exports = { fetchAndFilterJobs };
+/**
+ * Automates the fetching of jobs and inserts them into the MongoDB 'companies' collection.
+ * Extracts email from the job description if available. Filters out existing duplicates.
+ */
+const syncJobsToCompanies = async (userSkills = []) => {
+  try {
+    const jobs = await fetchAndFilterJobs(userSkills);
+    let newInserts = 0;
+
+    for (const job of jobs) {
+      const {
+        job_id,
+        employer_name,
+        job_title,
+        job_city, job_state, job_country,
+        job_apply_link,
+        job_description
+      } = job;
+
+      const companyName = employer_name || 'Unknown Company';
+      const jobTitle = job_title || 'Unknown Title';
+      
+      const locParts = [job_city, job_state, job_country].filter(Boolean);
+      const jobLocation = locParts.length > 0 ? locParts.join(', ') : 'Unknown Location';
+      const jobUrl = job_apply_link || '';
+
+      // Fallback regex to capture emails in job description
+      let extractedEmail = null;
+      if (job_description) {
+        const emailMatch = job_description.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        if (emailMatch) {
+          extractedEmail = emailMatch[0];
+        }
+      }
+
+      // Avoid duplicates using job_id or companyName+jobTitle combination
+      const query = [];
+      if (job_id) {
+        query.push({ job_id: job_id });
+      }
+      query.push({ companyName: companyName, jobTitle: jobTitle });
+
+      const existing = await Company.findOne({ $or: query });
+
+      if (!existing) {
+        await Company.create({
+          job_id: job_id || null,
+          companyName,
+          jobTitle,
+          jobLocation,
+          jobUrl,
+          hrEmail: extractedEmail || null,
+          status: "Pending",
+          source: "JSearch",
+          createdAt: new Date()
+        });
+        newInserts++;
+      }
+    }
+    
+    console.log(`[JobController] syncJobsToCompanies inserted ${newInserts} new jobs as Pending.`);
+    return newInserts;
+  } catch (error) {
+    console.error('[JobController] Error in syncJobsToCompanies:', error.message);
+    return 0;
+  }
+};
+
+module.exports = { fetchAndFilterJobs, syncJobsToCompanies };
+
