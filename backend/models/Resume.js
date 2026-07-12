@@ -31,6 +31,12 @@ const ResumeSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Extracted text content of the PDF
+    resumeText: {
+      type: String,
+      default: "",
+    },
+
     // When the resume was uploaded (explicit field + automatic via timestamps)
     uploadedAt: {
       type: Date,

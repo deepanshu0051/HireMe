@@ -207,14 +207,14 @@ const AdminDashboard = () => {
           }
 
           // Role aggregation
-          const role = company.jobRole || "General";
+          const role = company.jobTitle || "General";
           jobCounts[role] = (jobCounts[role] || 0) + 1;
 
           // Event feeds
           if (company.replied) {
             events.push({ timeVal: new Date(company.updatedAt || company.sentAt), dot: "#10B981", text: `Reply received from ${company.companyName}` });
           } else if (company.status === "Sent") {
-            events.push({ timeVal: new Date(company.sentAt), dot: "#2563EB", text: `Email sent to ${company.companyName} — ${company.jobRole}` });
+            events.push({ timeVal: new Date(company.sentAt), dot: "#2563EB", text: `Email sent to ${company.companyName} — ${company.jobTitle}` });
           } else if (company.status === "Failed") {
             events.push({ timeVal: new Date(company.updatedAt), dot: "#EF4444", text: `Failed to email ${company.companyName}` });
           }

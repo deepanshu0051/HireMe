@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { sendPendingEmails } = require('../controllers/cronController');
-const { syncJobsToCompanies } = require('../controllers/jobController');
-const Profile = require('../models/Profile');
+const { handleCronTrigger } = require('../controllers/cronController');
 
 /**
  * POST /api/cron/trigger
@@ -42,41 +40,16 @@ router.post('/trigger', async (req, res) => {
   console.log(`[CRON] External trigger received at ${timestamp} IST`);
 
   try {
-    // Fetch profile and extract skills
-    let userSkills = [];
-    const profile = await Profile.findOne({});
-    if (profile && profile.skills) {
-      userSkills = profile.skills;
-    }
-
-    // 3A. Fetch jobs from JSearch and ingest into MongoDB ('companies' collection)
-    const newJobsCount = await syncJobsToCompanies(userSkills);
-    console.log(`[CRON] Ingested ${newJobsCount} new jobs.`);
-
-    // 3B. Send emails to pending companies
-    const summary = await sendPendingEmails();
+    const summary = await handleCronTrigger();
 
     console.log(
       `[CRON] Run complete — sent: ${summary.emailsSent}, errors: ${summary.errors.length}`
     );
 
-    return res.status(200).json({
-      success: true,
-      message: 'Cron job executed successfully.',
-      timestamp,
-      result: {
-        newJobsIngested: newJobsCount,
-        emailsSent: summary.emailsSent,
-        errors: summary.errors,
-      },
-    });
+    return res.status(200).send('OK');
   } catch (err) {
     console.error('[CRON] Unhandled error during external trigger run:', err.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Cron job encountered an error.',
-      error: err.message,
-    });
+    return res.status(500).send('ERROR');
   }
 });
 

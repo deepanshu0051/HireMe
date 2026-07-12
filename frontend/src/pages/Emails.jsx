@@ -94,7 +94,7 @@ const Emails = () => {
   // Client-side search filtration natively
   const filteredCompanies = companies.filter(c => 
     c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.jobRole && c.jobRole.toLowerCase().includes(searchQuery.toLowerCase()))
+    (c.jobTitle && c.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const selectedCompany = companies.find(c => c._id === selectedId);
@@ -220,7 +220,7 @@ const Emails = () => {
                       <div className="flex-1 min-w-0 pr-2">
                         <p className="font-bold text-sm text-[#0F172A] truncate">{company.companyName}</p> {/* size-fix text-sm */}
                         <p className="text-[11px] font-medium text-[#64748B] truncate mt-0.5">
-                          {company.jobRole || 'Application Target'}
+                          {company.jobTitle || 'Application Target'}
                         </p>
                       </div>
                       <div className="flex flex-col items-end space-y-1.5 shrink-0 ml-1">

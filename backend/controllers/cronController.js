@@ -5,7 +5,8 @@ const Profile = require('../models/Profile');
 const Resume = require('../models/Resume');
 const transporter = require('../config/mailer');
 const { generateApplicationEmail } = require('../services/aiService');
-
+const { syncJobsToCompanies } = require('./jobController');
+const { extractSkillsFromResume } = require('../utils/resumeSkillExtractor');
 
 
 /**
@@ -80,11 +81,18 @@ const sendPendingEmails = async () => {
           continue;
         }
 
+        let aiResumeText = "";
+        if (latestResume && latestResume.resumeText && latestResume.resumeText.trim() !== '') {
+          aiResumeText = latestResume.resumeText.slice(0, 6000);
+        } else {
+          aiResumeText = adminProfile && adminProfile.skills ? adminProfile.skills.join(', ') : "";
+        }
+
         // A. Generate AI Content
         const aiResult = await generateApplicationEmail(
           company.jobTitle || 'Software Developer',
           company.companyName,
-          adminProfile ? adminProfile.skills : [],
+          aiResumeText,
           {
             applicantName: adminProfile ? adminProfile.fullName : "Deepanshu Bhati",
             applicantRole: adminProfile ? adminProfile.role : "Full Stack Developer"
@@ -137,6 +145,20 @@ const sendPendingEmails = async () => {
 
       } catch (emailError) {
         console.error(`[CronController] ✗ Failed for ${company.companyName}:`, emailError.message);
+        
+        try {
+          const emailLog = new EmailLog({
+            company: company._id,
+            subject: `Job Application — ${company.jobTitle} Position`,
+            body: emailError.message,
+            status: 'Failed',
+            sentAt: new Date(),
+          });
+          await emailLog.save();
+        } catch (logErr) {
+          console.error(`[CronController] Failed to log error for ${company.companyName}:`, logErr.message);
+        }
+
         company.status = 'Failed';
         await company.save();
         summary.errors.push({ company: company.companyName, error: emailError.message });
@@ -150,4 +172,27 @@ const sendPendingEmails = async () => {
   return summary;
 };
 
-module.exports = { sendPendingEmails };
+const handleCronTrigger = async () => {
+  let userSkills = [];
+  const profile = await Profile.findOne({ key: 'admin' });
+  
+  let resumeSkills = [];
+  const latestResume = await Resume.findOne().sort({ createdAt: -1 }).lean();
+  if (latestResume && latestResume.resumeText) {
+    resumeSkills = extractSkillsFromResume(latestResume.resumeText);
+  }
+
+  if (resumeSkills.length > 0) {
+    userSkills = resumeSkills;
+  } else if (profile && profile.skills) {
+    userSkills = profile.skills;
+  }
+
+  const newJobsCount = await syncJobsToCompanies(userSkills);
+  console.log(`[CRON] Ingested ${newJobsCount} new jobs.`);
+
+  const summary = await sendPendingEmails();
+  return summary;
+};
+
+module.exports = { sendPendingEmails, handleCronTrigger };

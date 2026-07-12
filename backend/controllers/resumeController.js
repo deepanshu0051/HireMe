@@ -8,6 +8,7 @@
 
 const cloudinary = require('../config/cloudinary');
 const Resume     = require('../models/Resume');
+const pdfParse   = require('pdf-parse');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1) POST /api/resume/upload
@@ -20,6 +21,19 @@ const uploadResume = async (req, res) => {
     // Step 1 — Validate that multer captured a file in memory
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded.' });
+    }
+
+    // Step 1.5 — Extract text from PDF buffer
+    let parsedText = "";
+    try {
+      const pdfResult = await pdfParse(req.file.buffer);
+      if (pdfResult && pdfResult.text) {
+        // Clean the extracted text: Replace multiple spaces/newlines with a single space and trim
+        parsedText = pdfResult.text.replace(/\s+/g, ' ').trim();
+      }
+    } catch (parseError) {
+      console.error('[Resume] PDF Parse Error:', parseError.message);
+      // Proceed with upload normally if parsing fails
     }
 
     // Step 2 — Upload the buffer to Cloudinary via upload_stream
@@ -64,6 +78,7 @@ const uploadResume = async (req, res) => {
         cloudinaryUrl: result.secure_url,
         publicId: result.public_id,
         filename: req.file.originalname,
+        resumeText: parsedText,
         uploadedAt: new Date()
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }

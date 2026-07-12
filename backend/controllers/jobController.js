@@ -1,6 +1,7 @@
 const { fetchJobsFromJSearch } = require('../config/jsearch');
 const { calculateSkillMatch } = require('../utils/skillMatcher');
 const Company = require('../models/Company');
+const Profile = require('../models/Profile');
 
 /**
  * Fetches fresher React developer jobs from JSearch API,
@@ -14,9 +15,21 @@ const Company = require('../models/Company');
  */
 const fetchAndFilterJobs = async (userSkills = []) => {
   try {
-    // 1. Fetch jobs with fixed parameters targeting fresher React roles in India
+    let queryStr = "software developer jobs in india";
+    const adminProfile = await Profile.findOne({ key: 'admin' }).lean();
+    if (adminProfile) {
+      let role = adminProfile.role || 'software developer';
+      if (adminProfile.skills && adminProfile.skills.length > 0) {
+        const topSkills = adminProfile.skills.slice(0, 2).join(' ');
+        queryStr = `${topSkills} ${role} jobs in india`.trim();
+      } else {
+        queryStr = `${role} jobs in india`.trim();
+      }
+    }
+
+    // 1. Fetch jobs dynamically based on admin profile
     const params = {
-      query: "fresher react developer jobs in india",
+      query: queryStr,
       num_pages: 1,
       country: "in",
       date_posted: "week",
