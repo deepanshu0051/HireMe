@@ -46,6 +46,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const cronRoutes = require('./routes/cronRoutes');
+const testRoutes = require('./routes/testRoutes'); // TEMPORARY — remove after Resend test
 
 // Auth Middleware
 const { requireAuth, requireAdmin } = require('./middleware/authMiddleware');
@@ -159,6 +160,9 @@ app.use('/api/settings', requireAuth, requireAdmin, settingsRoutes);
 
 // ─── External Cron Trigger — no JWT required, secured via X-Cron-Secret header
 app.use('/api/cron', cronRoutes);
+
+// ─── TEMPORARY: Resend email test route — remove after testing ───────────────
+app.use('/api/test', testRoutes);
 
 // Basic root route
 app.get('/', (req, res) => {
