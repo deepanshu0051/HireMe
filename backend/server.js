@@ -82,6 +82,11 @@ app.use(cors({
   credentials: true,
 }));
 
+// Trust Render's reverse proxy so req.ip resolves to the real client IP
+// (not the internal proxy IP). Without this, all traffic shares one IP bucket
+// and the rate limit is exhausted globally, causing false 429s on /api/health.
+app.set('trust proxy', 1);
+
 // Global rate limiter — 100 requests per 15 minutes per IP
 const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
