@@ -3,7 +3,8 @@ const EmailLog  = require('../models/EmailLog');
 const AppSetting = require('../models/AppSetting');
 const Profile = require('../models/Profile');
 const Resume = require('../models/Resume');
-const transporter = require('../config/mailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 const { generateApplicationEmail } = require('../services/aiService');
 const { syncJobsToCompanies } = require('./jobController');
 const { extractSkillsFromResume } = require('../utils/resumeSkillExtractor');
@@ -117,11 +118,11 @@ const sendPendingEmails = async () => {
         }
 
         // C. Dispatch
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
+        await resend.emails.send({
+          from: 'HireMe <onboarding@resend.dev>',
           to: company.hrEmail,
           subject: `Job Application — ${company.jobTitle} Position`,
-          text: finalBody,
+          html: finalBody.replace(/\n/g, '<br>'),
           attachments: attachments.length > 0 ? attachments : undefined
         });
 
