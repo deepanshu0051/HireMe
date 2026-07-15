@@ -1,4 +1,8 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Force IPv4-first DNS resolution to avoid ENETUNREACH on IPv6-restricted hosts (e.g. Render)
+dns.setDefaultResultOrder('ipv4first');
 
 // Debug: confirm credentials are loaded from environment
 console.log('EMAIL_USER loaded:', process.env.EMAIL_USER ? 'YES' : 'NO - MISSING!');
@@ -9,6 +13,7 @@ const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
   secure: false, // use TLS
+  family: 4,     // force IPv4 socket connection
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
