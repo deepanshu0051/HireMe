@@ -1,19 +1,13 @@
-const { Resend } = require('resend');
+const axios = require('axios');
 
 // Debug: confirm credentials are loaded from environment
 console.log('EMAIL_USER loaded:', process.env.EMAIL_USER ? 'YES' : 'NO - MISSING!');
-console.log('EMAIL_PASS loaded:', process.env.EMAIL_PASS ? 'YES' : 'NO - MISSING!');
-console.log('RESEND_API_KEY loaded:', process.env.RESEND_API_KEY ? 'YES' : 'NO - MISSING!');
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+console.log('BREVO_API_KEY loaded:', process.env.BREVO_API_KEY ? 'YES' : 'NO - MISSING!');
 
 /**
- * A thin proxy that mimics Nodemailer's transporter interface.
- * Both cronController and sendEmailController call transporter.sendMail()
- * so this drop-in replacement requires zero changes in those files.
- *
- * Resend sends email over HTTPS (port 443), which is never blocked by
- * cloud platforms like Render — unlike raw SMTP (ports 587/465).
+ * A thin proxy that mimics Nodemailer's transporter interface, allowing us
+ * to use Brevo's HTTP API as a drop-in replacement for raw SMTP.
+ * Render blocks SMTP (port 465/587) on free tiers, but HTTP (port 443) passes through!
  */
 const transporterProxy = {
   /**
@@ -21,42 +15,71 @@ const transporterProxy = {
    * Compatible with Nodemailer's sendMail signature.
    */
   async sendMail({ from, to, subject, html, attachments }) {
-    const payload = {
-      from: from || `HireMe <${process.env.EMAIL_USER}>`,
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      html,
+    // 1. Ensure we have the API key
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY is not defined in the environment variables.');
+    }
+
+    // 2. Format recipients for Brevo
+    // Brevo expects array of objects: [{ name: '...', email: '...' }]
+    const toList = Array.isArray(to) ? to : [to];
+    const brevoTo = toList.map(email => ({ email }));
+
+    // 3. Format sender (MUST match the verified email in Brevo)
+    const senderEmail = process.env.EMAIL_USER;
+    const sender = {
+      name: 'HireMe Platform',
+      email: senderEmail
     };
 
-    // Map Nodemailer-style attachments to Resend format if present
+    // 4. Construct the Brevo API Payload
+    const payload = {
+      sender,
+      to: brevoTo,
+      subject,
+      htmlContent: html,
+    };
+
+    // 5. Handle standard URL-based attachments
     if (attachments && attachments.length > 0) {
-      payload.attachments = attachments.map(att => ({
-        filename: att.filename,
-        path:     att.path,   // Resend supports URL paths
+      payload.attachment = attachments.map(att => ({
+        name: att.filename,
+        url: att.path // Brevo can download directly from Cloudinary URL which we pass in 'path'
       }));
     }
 
-    const { data, error } = await resend.emails.send(payload);
-
-    if (error) {
-      throw new Error(`Resend API error: ${error.message || JSON.stringify(error)}`);
+    // 6. Send via Brevo REST API
+    try {
+      const response = await axios.post(
+        'https://api.brevo.com/v3/smtp/email',
+        payload,
+        {
+          headers: {
+            'api-key': process.env.BREVO_API_KEY,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response && error.response.data
+        ? JSON.stringify(error.response.data)
+        : error.message;
+      throw new Error(`Brevo API error: ${errorMessage}`);
     }
-
-    return data;
   },
 
   /**
    * verify() — called on startup to confirm email service is reachable.
-   * Resend doesn't have a verify endpoint, so we do a lightweight test send.
    */
   async verify(callback) {
-    // Simply confirm the API key is present — actual delivery verified on first send
-    if (!process.env.RESEND_API_KEY) {
-      const err = new Error('RESEND_API_KEY is not set');
+    if (!process.env.BREVO_API_KEY) {
+      const err = new Error('BREVO_API_KEY is not set. Please add it to your .env in Render!');
       if (typeof callback === 'function') return callback(err);
       throw err;
     }
-    console.log('SMTP Configured: Resend API key present — service ready.');
+    console.log('SMTP Configured: Brevo API key present — HTTP service ready.');
     if (typeof callback === 'function') callback(null, true);
     return true;
   },
