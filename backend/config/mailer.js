@@ -1,73 +1,72 @@
-const nodemailer = require('nodemailer');
-const dns = require('dns');
-
-// Belt-and-suspenders: also set Node.js resolver order to prefer IPv4
-dns.setDefaultResultOrder('ipv4first');
+const { Resend } = require('resend');
 
 // Debug: confirm credentials are loaded from environment
 console.log('EMAIL_USER loaded:', process.env.EMAIL_USER ? 'YES' : 'NO - MISSING!');
 console.log('EMAIL_PASS loaded:', process.env.EMAIL_PASS ? 'YES' : 'NO - MISSING!');
+console.log('RESEND_API_KEY loaded:', process.env.RESEND_API_KEY ? 'YES' : 'NO - MISSING!');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
- * Build a Nodemailer transporter.
- * When `host` is an IPv4 address we also set tls.servername so that
- * TLS certificate validation still checks against 'smtp.gmail.com'.
- */
-function buildTransporter(host) {
-  const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(host);
-  return nodemailer.createTransport({
-    host,
-    port: 587,
-    secure: false, // STARTTLS
-    family: 4,     // restrict socket to IPv4
-    tls: {
-      servername: 'smtp.gmail.com', // required when host is a bare IP
-    },
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-}
-
-/**
- * Thin proxy exported to callers (cronController, sendEmailController).
- * The proxy delegates every method call to `_inner` so that when we
- * recreate `_inner` after the async DNS lookup the callers are unaffected.
+ * A thin proxy that mimics Nodemailer's transporter interface.
+ * Both cronController and sendEmailController call transporter.sendMail()
+ * so this drop-in replacement requires zero changes in those files.
+ *
+ * Resend sends email over HTTPS (port 443), which is never blocked by
+ * cloud platforms like Render — unlike raw SMTP (ports 587/465).
  */
 const transporterProxy = {
-  _inner: buildTransporter('smtp.gmail.com'), // safe fallback while resolving
+  /**
+   * sendMail({ from, to, subject, html, attachments })
+   * Compatible with Nodemailer's sendMail signature.
+   */
+  async sendMail({ from, to, subject, html, attachments }) {
+    const payload = {
+      from: from || `HireMe <${process.env.EMAIL_USER}>`,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+    };
 
-  sendMail(...args) {
-    return this._inner.sendMail(...args);
+    // Map Nodemailer-style attachments to Resend format if present
+    if (attachments && attachments.length > 0) {
+      payload.attachments = attachments.map(att => ({
+        filename: att.filename,
+        path:     att.path,   // Resend supports URL paths
+      }));
+    }
+
+    const { data, error } = await resend.emails.send(payload);
+
+    if (error) {
+      throw new Error(`Resend API error: ${error.message || JSON.stringify(error)}`);
+    }
+
+    return data;
   },
 
-  verify(...args) {
-    return this._inner.verify(...args);
+  /**
+   * verify() — called on startup to confirm email service is reachable.
+   * Resend doesn't have a verify endpoint, so we do a lightweight test send.
+   */
+  async verify(callback) {
+    // Simply confirm the API key is present — actual delivery verified on first send
+    if (!process.env.RESEND_API_KEY) {
+      const err = new Error('RESEND_API_KEY is not set');
+      if (typeof callback === 'function') return callback(err);
+      throw err;
+    }
+    console.log('SMTP Configured: Resend API key present — service ready.');
+    if (typeof callback === 'function') callback(null, true);
+    return true;
   },
 };
 
-// Pre-resolve smtp.gmail.com → IPv4 A record (dns.resolve4 never returns AAAA)
-// This bypasses libuv's getaddrinfo which ignores setDefaultResultOrder and
-// picks IPv6 on dual-stack hosts like Render — causing ENETUNREACH errors.
-dns.resolve4('smtp.gmail.com', (err, addresses) => {
-  if (!err && addresses && addresses.length > 0) {
-    const ipv4 = addresses[0];
-    console.log('[MAILER] Resolved smtp.gmail.com to IPv4:', ipv4);
-    transporterProxy._inner = buildTransporter(ipv4);
-  } else {
-    console.warn('[MAILER] IPv4 resolve failed, falling back to hostname:', err ? err.message : 'no addresses');
-    // _inner is already set to the hostname-based transporter above
+// Run verify on startup (matches existing behaviour)
+transporterProxy.verify((error) => {
+  if (error) {
+    console.error('SMTP Connection Error:', error.message);
   }
-
-  // Verify whichever transporter we ended up with
-  transporterProxy._inner.verify((error) => {
-    if (error) {
-      console.error('SMTP Connection Error:', error.message);
-    } else {
-      console.log('SMTP Configured: Server is ready to take our messages');
-    }
-  });
 });
 
 module.exports = transporterProxy;

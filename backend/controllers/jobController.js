@@ -62,39 +62,62 @@ const fetchAndFilterJobs = async (userSkills = []) => {
 
     console.log(`[JobController] Jobs after title filter (excluding senior roles): ${titleFilteredJobs.length}`);
 
-    // 4. Apply skill matching with a lowered threshold of 30% for testing
+    // 4. Apply skill matching — skip filter entirely if no skills are available
+    //    (empty userSkills means every job would score 0%, blocking all ingestion)
     const SKILL_THRESHOLD = 30;
+    let qualifiedJobs;
 
-    const qualifiedJobs = titleFilteredJobs
-      .map(job => {
-        const matchResult = calculateSkillMatch(
-          job.job_title,
-          job.job_description || '',
-          userSkills
-        );
-
-        return {
-          job_id:              job.job_id,
-          job_title:           job.job_title,
-          employer_name:       job.employer_name,
-          employer_website:    job.employer_website,
-          job_apply_link:      job.job_apply_link,
-          job_description:     job.job_description,
-          job_is_remote:       job.job_is_remote,
-          job_posted_at:       job.job_posted_at,
-          job_employment_type: job.job_employment_type,
-          job_city:            job.job_city,
-          job_state:           job.job_state,
-          job_country:         job.job_country,
-          // Skill match results
-          matchPercentage:     matchResult.matchPercentage,
-          matchedSkills:       matchResult.matchedSkills,
-          missingSkills:       matchResult.missingSkills,
-          isQualified:         matchResult.isQualified,
-        };
-      })
-      // 5. Keep jobs meeting the temporary 30% threshold
-      .filter(job => job.matchPercentage >= SKILL_THRESHOLD);
+    if (!userSkills || userSkills.length === 0) {
+      // No skills loaded → accept all title-filtered jobs unconditionally
+      console.log('[JobController] No user skills available — skipping skill filter, accepting all title-filtered jobs.');
+      qualifiedJobs = titleFilteredJobs.map(job => ({
+        job_id:              job.job_id,
+        job_title:           job.job_title,
+        employer_name:       job.employer_name,
+        employer_website:    job.employer_website,
+        job_apply_link:      job.job_apply_link,
+        job_description:     job.job_description,
+        job_is_remote:       job.job_is_remote,
+        job_posted_at:       job.job_posted_at,
+        job_employment_type: job.job_employment_type,
+        job_city:            job.job_city,
+        job_state:           job.job_state,
+        job_country:         job.job_country,
+        matchPercentage:     100,
+        matchedSkills:       [],
+        missingSkills:       [],
+        isQualified:         true,
+      }));
+    } else {
+      // Skills are available — score and filter normally
+      qualifiedJobs = titleFilteredJobs
+        .map(job => {
+          const matchResult = calculateSkillMatch(
+            job.job_title,
+            job.job_description || '',
+            userSkills
+          );
+          return {
+            job_id:              job.job_id,
+            job_title:           job.job_title,
+            employer_name:       job.employer_name,
+            employer_website:    job.employer_website,
+            job_apply_link:      job.job_apply_link,
+            job_description:     job.job_description,
+            job_is_remote:       job.job_is_remote,
+            job_posted_at:       job.job_posted_at,
+            job_employment_type: job.job_employment_type,
+            job_city:            job.job_city,
+            job_state:           job.job_state,
+            job_country:         job.job_country,
+            matchPercentage:     matchResult.matchPercentage,
+            matchedSkills:       matchResult.matchedSkills,
+            missingSkills:       matchResult.missingSkills,
+            isQualified:         matchResult.isQualified,
+          };
+        })
+        .filter(job => job.matchPercentage >= SKILL_THRESHOLD);
+    }
 
     console.log(`[JobController] Jobs after skill match filter (>= ${SKILL_THRESHOLD}%): ${qualifiedJobs.length}`);
 
@@ -175,4 +198,3 @@ const syncJobsToCompanies = async (userSkills = []) => {
 };
 
 module.exports = { fetchAndFilterJobs, syncJobsToCompanies };
-
