@@ -177,7 +177,7 @@ const syncJobsToCompanies = async (userSkills = []) => {
         await Company.create({
           job_id: job_id || null,
           companyName,
-          jobTitle,
+          jobRole: jobTitle,
           jobLocation,
           jobUrl,
           hrEmail: extractedEmail || null,
