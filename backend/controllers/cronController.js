@@ -3,11 +3,27 @@ const EmailLog  = require('../models/EmailLog');
 const AppSetting = require('../models/AppSetting');
 const Profile = require('../models/Profile');
 const Resume = require('../models/Resume');
-const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = require('../config/mailer');
 const { generateApplicationEmail } = require('../services/aiService');
 const { syncJobsToCompanies } = require('./jobController');
 const { extractSkillsFromResume } = require('../utils/resumeSkillExtractor');
+
+
+// ─── SMTP Helper ─────────────────────────────────────────────────────────────
+/**
+ * sendEmailViaSMTP
+ * Thin wrapper around the shared Nodemailer transporter.
+ * Uses dynamic from address so no email is ever hardcoded.
+ */
+async function sendEmailViaSMTP({ to, subject, html, attachments }) {
+  await transporter.sendMail({
+    from: `HireMe <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    html,
+    attachments,
+  });
+}
 
 
 /**
@@ -51,7 +67,7 @@ const sendPendingEmails = async () => {
     startOfTodayIST.setHours(0, 0, 0, 0);
     const endOfTodayIST = new Date(nowIST);
     endOfTodayIST.setHours(23, 59, 59, 999);
-    
+
     const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
     const startUTC = new Date(startOfTodayIST.getTime() - IST_OFFSET_MS);
     const endUTC   = new Date(endOfTodayIST.getTime() - IST_OFFSET_MS);
@@ -73,6 +89,9 @@ const sendPendingEmails = async () => {
 
     // 3. Process Batch
     for (const company of pendingCompanies) {
+      // Safe role/title — company documents may use either field name
+      const roleTitle = company.jobTitle || company.jobRole || 'Software Developer';
+
       try {
         // Guard: skip companies with no HR email
         if (!company.hrEmail) {
@@ -82,21 +101,21 @@ const sendPendingEmails = async () => {
           continue;
         }
 
-        let aiResumeText = "";
+        let aiResumeText = '';
         if (latestResume && latestResume.resumeText && latestResume.resumeText.trim() !== '') {
           aiResumeText = latestResume.resumeText.slice(0, 6000);
         } else {
-          aiResumeText = adminProfile && adminProfile.skills ? adminProfile.skills.join(', ') : "";
+          aiResumeText = adminProfile && adminProfile.skills ? adminProfile.skills.join(', ') : '';
         }
 
         // A. Generate AI Content
         const aiResult = await generateApplicationEmail(
-          company.jobTitle || 'Software Developer',
+          roleTitle,
           company.companyName,
           aiResumeText,
           {
-            applicantName: adminProfile ? adminProfile.fullName : "Deepanshu Bhati",
-            applicantRole: adminProfile ? adminProfile.role : "Full Stack Developer"
+            applicantName: adminProfile ? adminProfile.fullName : 'Deepanshu Bhati',
+            applicantRole: adminProfile ? adminProfile.role : 'Full Stack Developer'
           }
         );
 
@@ -106,32 +125,32 @@ const sendPendingEmails = async () => {
         // B. Handle Resume Placement
         if (latestResume && latestResume.cloudinaryUrl) {
           try {
-            // Attempt standard attachment logic
+            // Attempt standard attachment — Nodemailer supports `path` as a URL
             attachments.push({
               filename: latestResume.filename || 'Resume_Deepanshu_Bhati.pdf',
               path: latestResume.cloudinaryUrl
             });
           } catch (attError) {
-            // Reliability Fallback: Inject link into body if attachment fails
+            // Reliability Fallback: inject link into body if attachment fails
             finalBody += `\n\n[Resume Link: ${latestResume.cloudinaryUrl}]`;
           }
         }
 
-        // C. Dispatch
-        await resend.emails.send({
-          from: 'HireMe <onboarding@resend.dev>',
-          to: company.hrEmail,
-          subject: `Job Application — ${company.jobTitle} Position`,
-          html: finalBody.replace(/\n/g, '<br>'),
-          attachments: attachments.length > 0 ? attachments : undefined
+        // C. Dispatch via Gmail SMTP
+        console.log(`[CronController] Sending via SMTP to ${company.hrEmail} for ${company.companyName}`);
+        await sendEmailViaSMTP({
+          to:          company.hrEmail,
+          subject:     `Job Application — ${roleTitle} Position`,
+          html:        finalBody.replace(/\n/g, '<br>'),
+          attachments: attachments.length > 0 ? attachments : undefined,
         });
 
         const sentAt = new Date();
         const emailLog = new EmailLog({
           company: company._id,
-          subject: `Job Application — ${company.jobTitle} Position`,
-          body: finalBody,
-          status: 'Sent',
+          subject: `Job Application — ${roleTitle} Position`,
+          body:    finalBody,
+          status:  'Sent',
           sentAt,
         });
         await emailLog.save();
@@ -146,14 +165,14 @@ const sendPendingEmails = async () => {
 
       } catch (emailError) {
         console.error(`[CronController] ✗ Failed for ${company.companyName}:`, emailError.message);
-        
+
         try {
           const emailLog = new EmailLog({
             company: company._id,
-            subject: `Job Application — ${company.jobTitle} Position`,
-            body: emailError.message,
-            status: 'Failed',
-            sentAt: new Date(),
+            subject: `Job Application — ${roleTitle} Position`,
+            body:    emailError.message,
+            status:  'Failed',
+            sentAt:  new Date(),
           });
           await emailLog.save();
         } catch (logErr) {
@@ -176,7 +195,7 @@ const sendPendingEmails = async () => {
 const handleCronTrigger = async () => {
   let userSkills = [];
   const profile = await Profile.findOne({ key: 'admin' });
-  
+
   let resumeSkills = [];
   const latestResume = await Resume.findOne().sort({ createdAt: -1 }).lean();
   if (latestResume && latestResume.resumeText) {
