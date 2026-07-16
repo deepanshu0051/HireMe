@@ -21,7 +21,7 @@ const companySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Pending', 'Sent', 'Failed'],
+      enum: ['Pending', 'Sent', 'Failed', 'Skipped'],
       default: 'Pending',
     },
     replied: {
